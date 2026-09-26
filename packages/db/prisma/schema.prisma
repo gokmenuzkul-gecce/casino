@@ -1,0 +1,1245 @@
+// Aurora Casino Platform - full domain schema
+// Money is stored as BigInt minor units. Multipliers/rates as Decimal.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── IDENTITY ───────────────────────────────
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  username          String     @unique
+  passwordHash      String
+  roles             String[]   @default(["PLAYER"])
+  status            String     @default("PENDING_VERIFICATION")
+  emailVerifiedAt   DateTime?
+  phone             String?
+  phoneVerifiedAt   DateTime?
+  twoFactorEnabled  Boolean    @default(false)
+  twoFactorSecret   String?
+  backupCodes       String[]   @default([])
+  currency          String     @default("TRY")
+  locale            String     @default("tr")
+  timezone          String     @default("Europe/Istanbul")
+  country           String?
+  dateOfBirth       DateTime?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  registrationIp    String?
+  registrationSource String?
+  affiliateCode     String?    @unique
+  referredById      String?
+  referredBy        User?      @relation("Referrals", fields: [referredById], references: [id])
+  referrals         User[]     @relation("Referrals")
+  riskScore         Int        @default(0)
+  tags              String[]   @default([])
+  notes             String?
+  selfExcludedAt    DateTime?
+  selfExclusionUntil DateTime?
+  coolOffUntil      DateTime?
+  lockedAt          DateTime?
+  lockReason        String?
+  deletionRequestedAt DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  wallets           Wallet[]
+  sessions          Session[]
+  loginAttempts     LoginAttempt[]
+  kyc               KycProfile?
+  transactions      Transaction[]
+  bets              Bet[]
+  bonuses           UserBonus[]
+  bonusHistory      BonusHistory[]
+  limits            PlayerLimit[]
+  vip               VipProfile?
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  paymentIntents    PaymentIntent[]
+  paymentMethods    SavedPaymentMethod[]
+  affiliate         Affiliate?
+  affiliateEarnings AffiliateCommission[]
+  chatMessages      ChatMessage[]
+  tournamentEntries TournamentEntry[]
+  favorites         GameFavorite[]
+  achievements      UserAchievement[]
+  riskFlags         RiskFlag[]
+  adminNotes        AdminNote[]
+  deviceFingerprints DeviceFingerprint[]
+  responsibleGaming ResponsibleGamingEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([referredById])
+  @@map("users")
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String @unique
+  userAgent     String?
+  ip            String?
+  device        String?
+  deviceId      String?
+  country       String?
+  city          String?
+  isActive      Boolean  @default(true)
+  lastSeenAt    DateTime @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  revokedReason String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, isActive])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  identifier String
+  ip         String?
+  userAgent  String?
+  success    Boolean
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt])
+  @@index([ip, createdAt])
+  @@map("login_attempts")
+}
+
+model DeviceFingerprint {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fingerprint String
+  userAgent  String?
+  ip         String?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  trusted    Boolean  @default(false)
+  blocked    Boolean  @default(false)
+
+  @@unique([userId, fingerprint])
+  @@map("device_fingerprints")
+}
+
+model AdminNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorId  String
+  body      String
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("admin_notes")
+}
+
+// ─────────────────────────────── KYC ───────────────────────────────
+
+model KycProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          String   @default("NOT_STARTED")
+  level           Int      @default(0)
+  fullName        String?
+  birthDate       DateTime?
+  nationality     String?
+  documentType    String?
+  documentNumber  String?
+  documentExpiry  DateTime?
+  address         String?
+  city            String?
+  postalCode      String?
+  country         String?
+  documents       KycDocument[]
+  providerName    String?
+  providerRef     String?
+  providerResult  Json?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  riskLevel       String?
+  pepMatch        Boolean  @default(false)
+  sanctionsMatch  Boolean  @default(false)
+  submittedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@map("kyc_profiles")
+}
+
+model KycDocument {
+  id          String     @id @default(cuid())
+  kycId       String
+  kyc         KycProfile @relation(fields: [kycId], references: [id], onDelete: Cascade)
+  type        String
+  side        String?
+  fileUrl     String
+  fileHash    String?
+  mimeType    String?
+  sizeBytes   Int?
+  verified    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+
+  @@index([kycId])
+  @@map("kyc_documents")
+}
+
+// ─────────────────────────────── WALLET & LEDGER ───────────────────────────────
+
+model Wallet {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency    String   @default("TRY")
+  type        String   @default("REAL")
+  balance     BigInt   @default(0)
+  locked      BigInt   @default(0)
+  version     Int      @default(0)
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ledgerEntries LedgerEntry[]
+
+  @@unique([userId, currency, type])
+  @@index([userId])
+  @@map("wallets")
+}
+
+/// Immutable double-entry ledger. Every money movement writes balanced rows.
+model LedgerEntry {
+  id            String   @id @default(cuid())
+  walletId      String?
+  wallet        Wallet?  @relation(fields: [walletId], references: [id])
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  accountType   String
+  direction     String
+  amount        BigInt
+  balanceAfter  BigInt?
+  currency      String
+  createdAt     DateTime @default(now())
+
+  @@index([transactionId])
+  @@index([walletId, createdAt])
+  @@map("ledger_entries")
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  reference       String   @unique
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type            String
+  status          String   @default("PENDING")
+  amount          BigInt
+  fee             BigInt   @default(0)
+  netAmount       BigInt?
+  currency        String
+  balanceBefore   BigInt?
+  balanceAfter    BigInt?
+  walletType      String   @default("REAL")
+  method          String?
+  provider        String?
+  providerRef     String?
+  providerPayload Json?
+  idempotencyKey  String?  @unique
+  relatedBetId    String?
+  relatedBonusId  String?
+  metadata        Json?
+  description     String?
+  approvedById    String?
+  approvedAt      DateTime?
+  completedAt     DateTime?
+  failedReason    String?
+  ip              String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ledgerEntries   LedgerEntry[]
+
+  @@index([userId, createdAt])
+  @@index([type, status])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+// ─────────────────────────────── PAYMENTS ───────────────────────────────
+
+model PaymentIntent {
+  id            String   @id @default(cuid())
+  reference     String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  direction     String
+  method        String
+  provider      String?
+  amount        BigInt
+  fee           BigInt   @default(0)
+  currency      String
+  status        String   @default("PENDING")
+  providerRef   String?
+  providerPayload Json?
+  callbackPayload Json?
+  bonusCode     String?
+  iban          String?
+  walletAddress String?
+  bankName      String?
+  accountHolder String?
+  requiresReview Boolean @default(false)
+  reviewReason  String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  expiresAt     DateTime?
+  completedAt   DateTime?
+  failureReason String?
+  ip            String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, direction])
+  @@map("payment_intents")
+}
+
+model SavedPaymentMethod {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String
+  label      String?
+  provider   String?
+  maskedValue String?
+  token      String?
+  details    Json?
+  isDefault  Boolean  @default(false)
+  verified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("saved_payment_methods")
+}
+
+model PaymentMethodConfig {
+  id            String   @id @default(cuid())
+  method        String   @unique
+  enabled       Boolean  @default(true)
+  displayName   String
+  iconUrl       String?
+  minAmount     BigInt   @default(0)
+  maxAmount     BigInt   @default(0)
+  feePercent    Decimal  @default(0) @db.Decimal(6, 3)
+  feeFixed      BigInt   @default(0)
+  currencies    String[] @default(["TRY"])
+  sortOrder     Int      @default(0)
+  maintenanceMode Boolean @default(false)
+  instructions  String?
+  updatedAt     DateTime @updatedAt
+
+  @@map("payment_method_configs")
+}
+
+// ─────────────────────────────── GAMES & BETS ───────────────────────────────
+
+model GameCategoryModel {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  iconUrl   String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  games     Game[]
+
+  @@map("game_categories")
+}
+
+model GameProviderModel {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  logoUrl    String?
+  type       String   @default("INTERNAL")
+  isActive   Boolean  @default(true)
+  priority   Int      @default(0)
+  config     Json?
+  games      Game[]
+
+  @@map("game_providers")
+}
+
+model Game {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  description    String?
+  categoryId     String?
+  category       GameCategoryModel? @relation(fields: [categoryId], references: [id])
+  providerId     String?
+  provider       GameProviderModel? @relation(fields: [providerId], references: [id])
+  providerGameId String?
+  thumbnailUrl   String?
+  bannerUrl      String?
+  themeColor     String?
+  rtp            Decimal  @default(96) @db.Decimal(5, 2)
+  volatility     String   @default("MEDIUM")
+  minBet         BigInt   @default(100)
+  maxBet         BigInt   @default(100000000)
+  maxWin         BigInt?
+  lines          Int?
+  reels          Int?
+  isActive       Boolean  @default(true)
+  isFeatured     Boolean  @default(false)
+  isNew          Boolean  @default(false)
+  isExclusive    Boolean  @default(false)
+  isJackpot      Boolean  @default(false)
+  demoEnabled    Boolean  @default(true)
+  realEnabled    Boolean  @default(true)
+  launchUrl      String?
+  embedType      String   @default("INTERNAL")
+  tags           String[] @default([])
+  supportedCurrencies String[] @default(["TRY"])
+  jurisdictions  String[] @default([])
+  sortOrder      Int      @default(0)
+  playCount      BigInt   @default(0)
+  rating         Decimal? @db.Decimal(3, 2)
+  config         Json?
+  releasedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bets           Bet[]
+  rounds         GameRound[]
+  favorites      GameFavorite[]
+  jackpot        Jackpot?
+  bonuses        Bonus[]
+
+  @@index([categoryId, isActive])
+  @@index([providerId, isActive])
+  @@index([isFeatured])
+  @@map("games")
+}
+
+model GameFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, gameId])
+  @@map("game_favorites")
+}
+
+model GameRound {
+  id             String   @id @default(cuid())
+  gameId         String
+  game           Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  roundNumber    Int
+  status         String   @default("OPEN")
+  serverSeed     String
+  serverSeedHash String
+  clientSeed     String
+  nonce          Int      @default(0)
+  result         Json?
+  crashPoint     Decimal? @db.Decimal(12, 4)
+  totalBets      Int      @default(0)
+  totalWagered   BigInt   @default(0)
+  totalPayout    BigInt   @default(0)
+  startedAt      DateTime?
+  settledAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  bets           Bet[]
+
+  @@unique([gameId, roundNumber])
+  @@index([status])
+  @@map("game_rounds")
+}
+
+model Bet {
+  id            String   @id @default(cuid())
+  reference     String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId        String
+  game          Game     @relation(fields: [gameId], references: [id])
+  roundId       String?
+  round         GameRound? @relation(fields: [roundId], references: [id])
+  status        String   @default("PLACED")
+  stake         BigInt
+  payout        BigInt   @default(0)
+  currency      String
+  walletType    String   @default("REAL")
+  multiplier    Decimal? @db.Decimal(14, 6)
+  profit        BigInt   @default(0)
+  params        Json?
+  result        Json?
+  serverSeed    String?
+  serverSeedHash String?
+  clientSeed    String?
+  nonce         Int?
+  isDemo        Boolean  @default(false)
+  isBonusBet    Boolean  @default(false)
+  bonusId       String?
+  wageringContribution BigInt @default(0)
+  idempotencyKey String? @unique
+  ip            String?
+  deviceId      String?
+  placedAt      DateTime @default(now())
+  settledAt     DateTime?
+
+  @@index([userId, placedAt])
+  @@index([gameId, placedAt])
+  @@index([status])
+  @@map("bets")
+}
+
+model Jackpot {
+  id            String   @id @default(cuid())
+  gameId        String   @unique
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  name          String
+  currency      String   @default("TRY")
+  currentAmount BigInt   @default(0)
+  seedAmount    BigInt   @default(0)
+  contributionRate Decimal @default(1) @db.Decimal(5, 3)
+  lastWonAt     DateTime?
+  lastWinnerId  String?
+  lastWinAmount BigInt?
+  isActive      Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+
+  @@map("jackpots")
+}
+
+// ─────────────────────────────── BONUSES ───────────────────────────────
+
+model Bonus {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  name              String
+  description       String?
+  type              String
+  status            String   @default("ACTIVE")
+  percent           Decimal? @db.Decimal(8, 3)
+  fixedAmount       BigInt?
+  maxBonus          BigInt?
+  minDeposit        BigInt?
+  wageringMultiplier Decimal @default(30) @db.Decimal(8, 3)
+  maxBetWithBonus   BigInt?
+  contributionRates Json?
+  allowedGames      String[] @default([])
+  excludedGames     String[] @default([])
+  allowedCategories String[] @default([])
+  currency          String   @default("TRY")
+  validFrom         DateTime?
+  validUntil        DateTime?
+  perUserLimit      Int      @default(1)
+  totalBudget       BigInt?
+  usedBudget        BigInt   @default(0)
+  vipTiers          String[] @default([])
+  newPlayersOnly    Boolean  @default(true)
+  minKycLevel       Int      @default(0)
+  requiresDeposit   Boolean  @default(false)
+  depositCount      Int?
+  isAutoApply       Boolean  @default(false)
+  isStackable       Boolean  @default(false)
+  displayOnHome     Boolean  @default(true)
+  bannerUrl         String?
+  terms             String?
+  gameId            String?
+  game              Game?    @relation(fields: [gameId], references: [id])
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  userBonuses       UserBonus[]
+  history           BonusHistory[]
+  tournaments       Tournament[]
+
+  @@index([status, type])
+  @@index([code])
+  @@map("bonuses")
+}
+
+model UserBonus {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bonusId          String
+  bonus            Bonus    @relation(fields: [bonusId], references: [id])
+  status           String   @default("ACTIVE")
+  currency         String
+  grantedAmount    BigInt
+  remainingAmount  BigInt
+  wageringRequired BigInt
+  wageringProgress BigInt   @default(0)
+  wageringRemaining BigInt
+  maxWin           BigInt?
+  maxBet           BigInt?
+  expiresAt        DateTime?
+  activatedAt      DateTime @default(now())
+  completedAt      DateTime?
+  forfeitedAt      DateTime?
+  forfeitReason    String?
+  triggerTxId      String?
+  freeSpinsLeft    Int      @default(0)
+  freeSpinValue    BigInt?
+  freeSpinGameId   String?
+  metadata         Json?
+
+  history          BonusHistory[]
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("user_bonuses")
+}
+
+model BonusHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bonusId     String?
+  bonus       Bonus?   @relation(fields: [bonusId], references: [id])
+  userBonusId String?
+  userBonus   UserBonus? @relation(fields: [userBonusId], references: [id])
+  action      String
+  amount      BigInt?
+  wageringDelta BigInt?
+  detail      String?
+  actorId     String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("bonus_history")
+}
+
+// ─────────────────────────────── VIP & LOYALTY ───────────────────────────────
+
+model VipTierConfig {
+  id                String   @id @default(cuid())
+  tier              String   @unique
+  name              String
+  level             Int      @unique
+  minWagered        BigInt
+  cashbackPercent   Decimal  @db.Decimal(5, 3)
+  weeklyBonus       BigInt   @default(0)
+  monthlyBonus      BigInt   @default(0)
+  withdrawalLimit   BigInt?
+  personalManager   Boolean  @default(false)
+  birthdayBonus     BigInt   @default(0)
+  rakebackPercent   Decimal  @default(0) @db.Decimal(5, 3)
+  benefits          String[] @default([])
+  color             String   @default("#888888")
+  iconUrl           String?
+  isActive          Boolean  @default(true)
+
+  @@map("vip_tier_configs")
+}
+
+model VipProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier            String   @default("BRONZE")
+  level           Int      @default(1)
+  loyaltyPoints   BigInt   @default(0)
+  lifetimeWagered BigInt   @default(0)
+  lifetimeDeposits BigInt  @default(0)
+  lifetimeWithdrawals BigInt @default(0)
+  netLoss         BigInt   @default(0)
+  cashbackBalance BigInt   @default(0)
+  rakebackBalance BigInt   @default(0)
+  managerId       String?
+  managerNotes    String?
+  upgradedAt      DateTime?
+  lastCashbackAt  DateTime?
+  lastRakebackAt  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tier])
+  @@map("vip_profiles")
+}
+
+// ─────────────────────────────── TOURNAMENTS ───────────────────────────────
+
+model Tournament {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  description   String?
+  bannerUrl     String?
+  type          String   @default("LEADERBOARD")
+  status        String   @default("SCHEDULED")
+  metric        String   @default("WAGERED")
+  prizePool     BigInt
+  currency      String   @default("TRY")
+  entryFee      BigInt   @default(0)
+  maxEntries    Int?
+  minBet        BigInt?
+  bonusId       String?
+  bonus         Bonus?   @relation(fields: [bonusId], references: [id])
+  allowedGames  String[] @default([])
+  allowedCategories String[] @default([])
+  startAt       DateTime
+  endAt         DateTime
+  settledAt     DateTime?
+  isRecurring   Boolean  @default(false)
+  recurrence    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  entries       TournamentEntry[]
+
+  @@index([status, startAt])
+  @@map("tournaments")
+}
+
+model TournamentEntry {
+  id            String   @id @default(cuid())
+  tournamentId  String
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score         BigInt   @default(0)
+  rank          Int?
+  prizeAmount   BigInt   @default(0)
+  prizePaid     Boolean  @default(false)
+  joinedAt      DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, score])
+  @@map("tournament_entries")
+}
+
+// ─────────────────────────────── AFFILIATES ───────────────────────────────
+
+model Affiliate {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code              String   @unique
+  status            String   @default("ACTIVE")
+  commissionType    String   @default("REVENUE_SHARE")
+  revenueSharePercent Decimal @default(25) @db.Decimal(5, 2)
+  cpaAmount         BigInt   @default(0)
+  baselinePercent   Decimal  @default(0) @db.Decimal(5, 2)
+  subAffiliatePercent Decimal @default(5) @db.Decimal(5, 2)
+  currency          String   @default("TRY")
+  paymentMethod     String?
+  paymentDetails    Json?
+  minPayout         BigInt   @default(50000)
+  balance           BigInt   @default(0)
+  lifetimeEarnings  BigInt   @default(0)
+  lifetimePaid      BigInt   @default(0)
+  clicks            BigInt   @default(0)
+  signups           BigInt   @default(0)
+  depositors        BigInt   @default(0)
+  totalDeposits     BigInt   @default(0)
+  totalNetRevenue   BigInt   @default(0)
+  managerId         String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  commissions       AffiliateCommission[]
+  payouts           AffiliatePayout[]
+  clicksLog         AffiliateClick[]
+
+  @@map("affiliates")
+}
+
+model AffiliateCommission {
+  id           String   @id @default(cuid())
+  affiliateId  String
+  affiliate    Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type         String
+  amount       BigInt
+  currency     String
+  periodStart  DateTime
+  periodEnd    DateTime
+  deposits     BigInt   @default(0)
+  netRevenue   BigInt   @default(0)
+  status       String   @default("PENDING")
+  paidAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([affiliateId, periodStart])
+  @@map("affiliate_commissions")
+}
+
+model AffiliatePayout {
+  id          String   @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  amount      BigInt
+  currency    String
+  status      String   @default("PENDING")
+  method      String?
+  reference   String?
+  approvedById String?
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("affiliate_payouts")
+}
+
+model AffiliateClick {
+  id          String   @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  ip          String?
+  userAgent   String?
+  country     String?
+  landingPage String?
+  converted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([affiliateId, createdAt])
+  @@map("affiliate_clicks")
+}
+
+// ─────────────────────────────── ENGAGEMENT ───────────────────────────────
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  channel   String   @default("lobby")
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username  String
+  message   String
+  role      String   @default("PLAYER")
+  vipTier   String?
+  isDeleted Boolean  @default(false)
+  deletedById String?
+  flagged   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([channel, createdAt])
+  @@map("chat_messages")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel   String   @default("IN_APP")
+  type      String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  sentAt    DateTime?
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  progress      Int      @default(0)
+  unlockedAt    DateTime?
+  claimedAt     DateTime?
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  iconUrl     String?
+  metric      String
+  target      Int
+  rewardAmount BigInt  @default(0)
+  currency    String   @default("TRY")
+  tier        String   @default("BRONZE")
+  isActive    Boolean  @default(true)
+
+  users       UserAchievement[]
+
+  @@map("achievements")
+}
+
+model Mission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  type        String   @default("DAILY")
+  metric      String
+  target      Int
+  rewardAmount BigInt  @default(0)
+  rewardCurrency String @default("TRY")
+  isActive    Boolean  @default(true)
+  startAt     DateTime?
+  endAt       DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("missions")
+}
+
+// ─────────────────────────────── RISK & COMPLIANCE ───────────────────────────────
+
+model RiskFlag {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type        String
+  severity    String   @default("LOW")
+  status      String   @default("OPEN")
+  title       String
+  detail      String?
+  metadata    Json?
+  assignedToId String?
+  resolvedById String?
+  resolvedAt  DateTime?
+  resolution  String?
+  createdAt   DateTime @default(now())
+
+  @@index([status, severity])
+  @@index([userId])
+  @@map("risk_flags")
+}
+
+model Blocklist {
+  id        String   @id @default(cuid())
+  type      String
+  value     String
+  reason    String?
+  createdById String?
+  expiresAt DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([type, value])
+  @@map("blocklist")
+}
+
+model ResponsibleGamingEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  detail    String?
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("responsible_gaming_events")
+}
+
+model PlayerLimit {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  period      String
+  amount      BigInt
+  currency    String   @default("TRY")
+  isActive    Boolean  @default(true)
+  setById     String?
+  effectiveAt DateTime @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, type, period])
+  @@map("player_limits")
+}
+
+// ─────────────────────────────── CMS & SETTINGS ───────────────────────────────
+
+model CmsPage {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  content     String
+  locale      String   @default("tr")
+  status      String   @default("DRAFT")
+  seoTitle    String?
+  seoDescription String?
+  seoKeywords String[] @default([])
+  publishedAt DateTime?
+  authorId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cms_pages")
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  imageUrl  String
+  linkUrl   String?
+  position  String   @default("HOME_HERO")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  startAt   DateTime?
+  endAt     DateTime?
+  locales   String[] @default(["tr"])
+  createdAt DateTime @default(now())
+
+  @@map("banners")
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  type      String   @default("INFO")
+  isActive  Boolean  @default(true)
+  dismissible Boolean @default(true)
+  startAt   DateTime?
+  endAt     DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("announcements")
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  category  String   @default("general")
+  isSecret  Boolean  @default(false)
+  updatedById String?
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("settings")
+}
+
+model FeatureFlag {
+  key         String   @id
+  enabled     Boolean  @default(false)
+  description String?
+  rolloutPercent Int   @default(100)
+  updatedAt   DateTime @updatedAt
+
+  @@map("feature_flags")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole  String?
+  action     String
+  entityType String?
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  severity   String   @default("INFO")
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────── AUTOMATION ───────────────────────────────
+
+model JobRun {
+  id         String   @id @default(cuid())
+  queue      String
+  jobName    String
+  jobId      String?
+  status     String   @default("RUNNING")
+  attempts   Int      @default(1)
+  payload    Json?
+  result     Json?
+  error      String?
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+  durationMs Int?
+
+  @@index([queue, status])
+  @@map("job_runs")
+}
+
+model ScheduledTask {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  cron        String
+  handler     String
+  isActive    Boolean  @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  lastStatus  String?
+  lastError   String?
+  runCount    BigInt   @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@map("scheduled_tasks")
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  subject   String
+  html      String
+  text      String?
+  locale    String   @default("tr")
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+model OutboundMessage {
+  id         String   @id @default(cuid())
+  channel    String
+  templateKey String?
+  toAddress  String
+  subject    String?
+  body       String
+  status     String   @default("QUEUED")
+  provider   String?
+  providerRef String?
+  error      String?
+  attempts   Int      @default(0)
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([status, channel])
+  @@map("outbound_messages")
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  eventType  String
+  reference  String?
+  signature  String?
+  payload    Json
+  verified   Boolean  @default(false)
+  processed  Boolean  @default(false)
+  processedAt DateTime?
+  error      String?
+  createdAt  DateTime @default(now())
+
+  @@index([provider, processed])
+  @@map("webhook_events")
+}
+
+model ProviderConfig {
+  id          String   @id @default(cuid())
+  kind        String
+  provider    String
+  isEnabled   Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  config      Json?
+  lastSyncAt  DateTime?
+  lastError   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([kind, provider])
+  @@map("provider_configs")
+}
+
+model LeaderboardSnapshot {
+  id        String   @id @default(cuid())
+  period    String
+  metric    String
+  userId    String
+  username  String
+  value     BigInt
+  rank      Int
+  currency  String   @default("TRY")
+  capturedAt DateTime @default(now())
+
+  @@index([period, metric, capturedAt])
+  @@map("leaderboard_snapshots")
+}
+
+model GameStatDaily {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  gameId      String
+  currency    String
+  bets        Int      @default(0)
+  uniquePlayers Int    @default(0)
+  wagered     BigInt   @default(0)
+  payout      BigInt   @default(0)
+  ggr         BigInt   @default(0)
+  bonusWagered BigInt  @default(0)
+
+  @@unique([date, gameId, currency])
+  @@index([date])
+  @@map("game_stats_daily")
+}
+
+model PlayerStatDaily {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  userId      String
+  currency    String
+  deposits    BigInt   @default(0)
+  withdrawals BigInt   @default(0)
+  wagered     BigInt   @default(0)
+  won         BigInt   @default(0)
+  netLoss     BigInt   @default(0)
+  bets        Int      @default(0)
+  sessions    Int      @default(0)
+
+  @@unique([date, userId, currency])
+  @@index([date])
+  @@map("player_stats_daily")
+}
+
+model FinancialStatDaily {
+  id            String   @id @default(cuid())
+  date          DateTime @db.Date @unique
+  currency      String
+  deposits      BigInt   @default(0)
+  withdrawals   BigInt   @default(0)
+  depositCount  Int      @default(0)
+  withdrawalCount Int    @default(0)
+  wagered       BigInt   @default(0)
+  payout        BigInt   @default(0)
+  ggr           BigInt   @default(0)
+  bonusCost     BigInt   @default(0)
+  newPlayers    Int      @default(0)
+  activePlayers Int      @default(0)
+  affiliateCost BigInt   @default(0)
+
+  @@map("financial_stats_daily")
+}

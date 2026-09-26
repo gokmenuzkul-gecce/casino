@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img">
+  <defs>
+    <linearGradient id="bgblackjack" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151925"/><stop offset="1" stop-color="#0b0d14"/>
+    </linearGradient>
+    <radialGradient id="glowblackjack" cx="50%" cy="38%" r="62%">
+      <stop offset="0" stop-color="#0ea5e9" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#0ea5e9" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rimblackjack" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0c674" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#d6a84f" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgblackjack)"/>
+  <rect width="400" height="400" fill="url(#glowblackjack)"/>
+  <g transform="translate(200 208)"><g transform="translate(-52 -14) rotate(-13)"><rect x="-62" y="-86" width="124" height="172" rx="13" fill="#0d1018" stroke="#2a3242" stroke-width="2"/><rect x="-52" y="-76" width="104" height="152" rx="9" fill="#151925"/></g><g transform="translate(34 10) rotate(9)"><rect x="-62" y="-86" width="124" height="172" rx="13" fill="#f4f6fa" stroke="#c8cdd8" stroke-width="2"/><text x="-44" y="-48" font-family="Georgia, serif" font-size="34" font-weight="bold" fill="#c0392b">A</text><text x="44" y="62" text-anchor="end" font-family="Georgia, serif" font-size="34" font-weight="bold" fill="#c0392b" transform="rotate(180 44 62)">A</text><path d="M0 -12 C-16 -30 -30 -20 -30 -8 C-30 6 -12 12 0 26 C12 12 30 6 30 -8 C30 -20 16 -30 0 -12 Z" fill="#c0392b"/></g><g transform="translate(-70 54) rotate(-13)"><rect x="-52" y="-76" width="104" height="152" rx="9" fill="#151925"/><text x="-34" y="-40" font-family="Georgia, serif" font-size="30" font-weight="bold" fill="#0ea5e9">10</text></g></g>
+  <rect x="0.5" y="0.5" width="399" height="399" fill="none" stroke="url(#rimblackjack)" stroke-width="1.5"/>
+</svg>

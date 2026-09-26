@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img">
+  <defs>
+    <linearGradient id="bgslots" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151925"/><stop offset="1" stop-color="#0b0d14"/>
+    </linearGradient>
+    <radialGradient id="glowslots" cx="50%" cy="38%" r="62%">
+      <stop offset="0" stop-color="#7c3aed" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#7c3aed" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rimslots" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0c674" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#d6a84f" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgslots)"/>
+  <rect width="400" height="400" fill="url(#glowslots)"/>
+  <g transform="translate(200 205)"><rect x="-116" y="-96" width="232" height="192" rx="18" fill="#0a0c12" stroke="#7c3aed" stroke-opacity="0.4" stroke-width="2"/><rect x="-106" y="-78" width="64" height="156" rx="11" fill="#7c3aed" fill-opacity="0.11" stroke="#7c3aed" stroke-opacity="0.32"/><g transform="translate(-74 12)"><path d="M0 -26 L22 0 L0 26 L-22 0 Z" fill="#7c3aed" fill-opacity="0.95"/></g><rect x="-32" y="-78" width="64" height="156" rx="11" fill="#7c3aed" fill-opacity="0.11" stroke="#7c3aed" stroke-opacity="0.32"/><g transform="translate(0 -8)"><path d="M0 -28 L8 -9 L28 -9 L12 3 L18 23 L0 11 L-18 23 L-12 3 L-28 -9 L-8 -9 Z" fill="#f0c674"/></g><rect x="42" y="-78" width="64" height="156" rx="11" fill="#7c3aed" fill-opacity="0.11" stroke="#7c3aed" stroke-opacity="0.32"/><g transform="translate(74 12)"><circle r="20" fill="#7c3aed" fill-opacity="0.9"/><circle r="9" fill="#0b0d14" fill-opacity="0.6"/></g><rect x="-116" y="96" width="232" height="16" rx="8" fill="#7c3aed" fill-opacity="0.28"/></g>
+  <rect x="0.5" y="0.5" width="399" height="399" fill="none" stroke="url(#rimslots)" stroke-width="1.5"/>
+</svg>

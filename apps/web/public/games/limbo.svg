@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img">
+  <defs>
+    <linearGradient id="bglimbo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151925"/><stop offset="1" stop-color="#0b0d14"/>
+    </linearGradient>
+    <radialGradient id="glowlimbo" cx="50%" cy="38%" r="62%">
+      <stop offset="0" stop-color="#ec4899" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#ec4899" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rimlimbo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0c674" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#d6a84f" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bglimbo)"/>
+  <rect width="400" height="400" fill="url(#glowlimbo)"/>
+  <g transform="translate(200 210)"><rect x="-150" y="96" width="300" height="12" rx="6" fill="#2a3242"/><g transform="translate(-58 -6)"><path d="M0 60 C0 60 -14 8 0 -34 C14 8 0 60 0 60 Z" fill="#ec4899" fill-opacity="0.9"/><path d="M0 46 C-8 12 -8 -8 0 -30 C8 -8 8 12 0 46 Z" fill="#fff" fill-opacity="0.32"/><circle cx="0" cy="-34" r="9" fill="#f0c674"/><path d="M-16 62 L16 62 L11 78 L-11 78 Z" fill="#2a3242"/><path d="M-11 78 L-19 100 M11 78 L19 100 M0 78 L0 104" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" stroke-opacity="0.85"/></g><text x="86" y="22" font-family="monospace" font-size="46" font-weight="bold" fill="#ec4899">x</text><text x="86" y="80" font-family="monospace" font-size="42" font-weight="bold" fill="#f0c674">99</text></g>
+  <rect x="0.5" y="0.5" width="399" height="399" fill="none" stroke="url(#rimlimbo)" stroke-width="1.5"/>
+</svg>

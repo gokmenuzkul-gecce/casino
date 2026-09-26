@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img">
+  <defs>
+    <linearGradient id="bgroulette" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151925"/><stop offset="1" stop-color="#0b0d14"/>
+    </linearGradient>
+    <radialGradient id="glowroulette" cx="50%" cy="38%" r="62%">
+      <stop offset="0" stop-color="#dc2626" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#dc2626" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#dc2626" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rimroulette" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0c674" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#d6a84f" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgroulette)"/>
+  <rect width="400" height="400" fill="url(#glowroulette)"/>
+  <g transform="translate(200 200)"><circle r="122" fill="#0a0c12" stroke="#d6a84f" stroke-opacity="0.5" stroke-width="3"/><circle r="104" fill="none" stroke="#6b3410" stroke-width="7"/><path d="M0 0 L0.0 -104.0 A104 104 0 0 1 52.0 -90.1 Z" fill="#dc2626" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L52.0 -90.1 A104 104 0 0 1 90.1 -52.0 Z" fill="#0d1018" fill-opacity="1" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L90.1 -52.0 A104 104 0 0 1 104.0 -0.0 Z" fill="#dc2626" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L104.0 -0.0 A104 104 0 0 1 90.1 52.0 Z" fill="#0d1018" fill-opacity="1" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L90.1 52.0 A104 104 0 0 1 52.0 90.1 Z" fill="#dc2626" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L52.0 90.1 A104 104 0 0 1 0.0 104.0 Z" fill="#0d1018" fill-opacity="1" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L0.0 104.0 A104 104 0 0 1 -52.0 90.1 Z" fill="#dc2626" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L-52.0 90.1 A104 104 0 0 1 -90.1 52.0 Z" fill="#0d1018" fill-opacity="1" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L-90.1 52.0 A104 104 0 0 1 -104.0 0.0 Z" fill="#dc2626" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L-104.0 0.0 A104 104 0 0 1 -90.1 -52.0 Z" fill="#0d1018" fill-opacity="1" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L-90.1 -52.0 A104 104 0 0 1 -52.0 -90.1 Z" fill="#dc2626" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4"/><path d="M0 0 L-52.0 -90.1 A104 104 0 0 1 -0.0 -104.0 Z" fill="#0d1018" fill-opacity="1" stroke="#000" stroke-opacity="0.4"/><circle r="46" fill="#0a0c12" stroke="#d6a84f" stroke-opacity="0.6" stroke-width="3"/><circle r="14" fill="#d6a84f" fill-opacity="0.85"/><g transform="translate(0 -132)"><circle r="11" fill="#10b981"/><text y="4" text-anchor="middle" font-family="monospace" font-size="12" font-weight="bold" fill="#04140e">0</text></g></g>
+  <rect x="0.5" y="0.5" width="399" height="399" fill="none" stroke="url(#rimroulette)" stroke-width="1.5"/>
+</svg>

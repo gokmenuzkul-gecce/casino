@@ -1,0 +1,35 @@
+{
+  "name": "aurora-casino",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Aurora - ozgun, lisanslanabilir online casino ve spor bahis platformu",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "infra:up": "docker compose -f infra/docker-compose.yml --env-file .env up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml --env-file .env down",
+    "infra:logs": "docker compose -f infra/docker-compose.yml --env-file .env logs -f",
+    "db:generate": "npm run generate -w @aurora/db",
+    "db:migrate": "npm run migrate -w @aurora/db",
+    "db:push": "npm run push -w @aurora/db",
+    "db:seed": "npm run seed -w @aurora/db",
+    "db:studio": "npm run studio -w @aurora/db",
+    "dev:engine": "npm run dev -w @aurora/engine",
+    "dev:web": "npm run dev -w @aurora/web",
+    "dev": "concurrently -n engine,web -c magenta,cyan \"npm:dev:engine\" \"npm:dev:web\"",
+    "build": "npm run build -w @aurora/shared && npm run build -w @aurora/db && npm run build -w @aurora/engine && npm run build -w @aurora/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "socket.io-client": "^4.8.4",
+    "typescript": "^5.7.3"
+  }
+}

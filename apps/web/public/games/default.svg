@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img">
+  <defs>
+    <linearGradient id="bgdef" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151925"/><stop offset="1" stop-color="#0b0d14"/>
+    </linearGradient>
+    <radialGradient id="glowdef" cx="50%" cy="38%" r="62%">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#8b5cf6" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rimdef" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0c674" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#d6a84f" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgdef)"/>
+  <rect width="400" height="400" fill="url(#glowdef)"/>
+  <g transform="translate(200 200)"><rect x="-96" y="-72" width="192" height="144" rx="20" fill="#0d1018" stroke="#8b5cf6" stroke-opacity="0.45" stroke-width="2"/><circle cx="-42" cy="-22" r="13" fill="#8b5cf6" fill-opacity="0.8"/><circle cx="0" cy="0" r="13" fill="#d6a84f" fill-opacity="0.9"/><circle cx="42" cy="22" r="13" fill="#8b5cf6" fill-opacity="0.8"/><circle cx="42" cy="-22" r="13" fill="#22d3ee" fill-opacity="0.7"/><circle cx="-42" cy="22" r="13" fill="#22d3ee" fill-opacity="0.7"/></g>
+  <rect x="0.5" y="0.5" width="399" height="399" fill="none" stroke="url(#rimdef)" stroke-width="1.5"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img">
+  <defs>
+    <linearGradient id="bgdice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151925"/><stop offset="1" stop-color="#0b0d14"/>
+    </linearGradient>
+    <radialGradient id="glowdice" cx="50%" cy="38%" r="62%">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#8b5cf6" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rimdice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0c674" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#d6a84f" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgdice)"/>
+  <rect width="400" height="400" fill="url(#glowdice)"/>
+  <g transform="translate(200 208)"><g transform="translate(-44 -20) rotate(-11)"><rect x="-72" y="-72" width="144" height="144" rx="26" fill="#f4f6fa"/><circle cx="-34" cy="-34" r="14" fill="#12151d"/><circle cx="34" cy="-34" r="14" fill="#12151d"/><circle cx="0" cy="0" r="14" fill="#12151d"/><circle cx="-34" cy="34" r="14" fill="#12151d"/><circle cx="34" cy="34" r="14" fill="#12151d"/></g><g transform="translate(58 34) rotate(13)"><rect x="-60" y="-60" width="120" height="120" rx="22" fill="#8b5cf6"/><circle cx="-28" cy="-28" r="12" fill="#0b0d14"/><circle cx="28" cy="28" r="12" fill="#0b0d14"/></g></g>
+  <rect x="0.5" y="0.5" width="399" height="399" fill="none" stroke="url(#rimdice)" stroke-width="1.5"/>
+</svg>
