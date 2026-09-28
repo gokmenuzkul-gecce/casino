@@ -346,13 +346,27 @@ function ExternalGamePage({ slug, game }: { slug: string; game: GameCardData }) 
     setError(null);
     setLaunching(true);
     setMode(chosen);
+
+    // Open the tab synchronously, while the click is still the active gesture.
+    // Opening it after the await below makes browsers treat it as a popup and
+    // block it, which is what made the game look like it never started.
+    // No "noopener" feature: that makes window.open return null, so we detach
+    // the opener manually instead.
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
     try {
       const { post } = await import("../lib/api");
       const launched = await post<{ url?: string; launchUrl?: string }>(`/api/games/${slug}/launch`, { mode: chosen });
       const url = launched.url ?? launched.launchUrl;
-      if (url) window.open(url, "_blank", "noopener");
-      else setError("Saglayici oturumu baslatilamadi. Agregator API bilgilerini girin.");
+      if (url) {
+        if (tab && !tab.closed) tab.location.href = url;
+        else window.location.href = url;
+      } else {
+        tab?.close();
+        setError("Saglayici oturumu baslatilamadi. Agregator API bilgilerini girin.");
+      }
     } catch (err) {
+      tab?.close();
       setError(err instanceof Error ? err.message : "Oyun baslatilamadi");
     } finally {
       setLaunching(false);

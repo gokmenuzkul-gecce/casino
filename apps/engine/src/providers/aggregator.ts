@@ -23,6 +23,12 @@ export interface AggregatorGame {
   jurisdictions?: string[];
   tags?: string[];
   releasedAt?: string;
+  /**
+   * Provider-side handle needed to open a session (e.g. BetSkilla's session
+   * router). Persisted at sync time so launching never has to re-scan the
+   * whole catalogue to rediscover it.
+   */
+  launchRouter?: string;
 }
 
 export interface LaunchSessionRequest {
@@ -44,6 +50,8 @@ export interface LaunchSessionRequest {
   playerLogin?: string;
   /** Per-session callback URL override, when the provider supports it. */
   callbackUrlOverride?: string;
+  /** Provider-side launch handle persisted at sync time, when known. */
+  launchRouter?: string;
 }
 
 export interface LaunchSessionResult {

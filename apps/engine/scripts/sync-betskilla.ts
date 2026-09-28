@@ -78,6 +78,7 @@ async function main(): Promise<void> {
             providerGameId: game.externalId,
             thumbnailUrl: game.thumbnailUrl,
             embedType: "EXTERNAL",
+            config: game.launchRouter ? { launchRouter: game.launchRouter } : undefined,
             rtp: 96,
             volatility: "MEDIUM",
             minBet: 1_00n,
@@ -94,7 +95,7 @@ async function main(): Promise<void> {
             providerId: providerRow.id,
             providerGameId: game.externalId,
             thumbnailUrl: game.thumbnailUrl,
-            themeColor: game.themeColor,
+            config: game.launchRouter ? { launchRouter: game.launchRouter } : undefined,
             isActive: true,
           },
         });

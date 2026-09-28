@@ -132,14 +132,20 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
       realSupported: true,
       currencies: [this.config.currency],
       tags: [type, raw.provider?.label ?? ""].filter(Boolean),
+      launchRouter: raw.gameSessionRouter,
     };
   }
 
   async launchSession(request: LaunchSessionRequest): Promise<LaunchSessionResult> {
     if (!this.isConfigured) throw Errors.providerDisabled("Oyun agregatoru");
 
-    const game = await this.findGame(request.externalGameId);
-    const router = game?.gameSessionRouter;
+    // Prefer the router we stored at sync time; only fall back to a catalogue
+    // scan when it is missing (e.g. rows imported before this field existed).
+    let router = request.launchRouter;
+    if (!router) {
+      const game = await this.findGame(request.externalGameId);
+      router = game?.gameSessionRouter;
+    }
     if (!router) throw Errors.providerError(this.name, `Oyun yonlendiricisi bulunamadi: ${request.externalGameId}`);
 
     const response = await this.call<{ type: string; sessionId: string; value: string }>(

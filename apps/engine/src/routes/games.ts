@@ -326,8 +326,10 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     const registry = app.providers;
     const sessionToken = `${request.user!.id}:${Date.now()}`;
     const returnUrl = `${env.appUrl}/play/${game.slug}`;
+    const launchRouter = (game.config as { launchRouter?: string } | null)?.launchRouter;
     const result = await registry.gameAggregator.launchSession({
       externalGameId: game.providerGameId ?? game.slug,
+      launchRouter,
       playerId: request.user!.id,
       // Providers address the player by login, so register the username and keep
       // the id as the wallet key. The callback route resolves either.
