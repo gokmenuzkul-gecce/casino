@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AppError, Errors } from "@aurora/shared";
 import { prisma } from "@aurora/db";
 import { env } from "../lib/env.js";
@@ -244,14 +244,17 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /**
-   * Seamless-wallet callbacks in the Gregmorn command envelope.
+   * Seamless-wallet callbacks in the hub command envelope.
    *
    * The provider owns the round and asks us to move money. The reply must be
    * the provider's own shape, and a business rejection must arrive as HTTP 400
    * with `status: "fail"`: the provider reads that as "do not start the spin".
    * Anything we cannot settle is therefore an explicit 400, never a 500.
+   *
+   * Registered under the active aggregator's own name and, for compatibility
+   * with deployments already pointed at it, the historical `gregmorn` path.
    */
-  app.post("/webhooks/aggregator/gregmorn/wallet", async (request, reply) => {
+  const walletCallback = async (request: FastifyRequest, reply: FastifyReply) => {
     const rawBody = typeof request.body === "string" ? request.body : JSON.stringify(request.body ?? {});
     const payload = (typeof request.body === "object" && request.body !== null ? request.body : {}) as Record<string, unknown>;
     const headers = request.headers as Record<string, string | undefined>;
@@ -327,7 +330,13 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
           },
         );
     }
-  });
+  };
+
+  const aggregatorName = app.providers.gameAggregator.name;
+  app.post(`/webhooks/aggregator/${aggregatorName}/wallet`, walletCallback);
+  if (aggregatorName !== "gregmorn") {
+    app.post("/webhooks/aggregator/gregmorn/wallet", walletCallback);
+  }
 
   /** Affiliate postback: records a click and attributes the visitor. */
   app.get("/webhooks/affiliate/:code", async (request, reply) => {

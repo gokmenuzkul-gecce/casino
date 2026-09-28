@@ -111,6 +111,23 @@ Verifying this end to end without live credentials is possible by pointing
 `POST /games/openGame`. That exercises the real login, import, listing and launch
 code paths; only the vendor's network is simulated.
 
+## Aggregator wallets
+
+Games hosted by an aggregator settle against our ledger over a **seamless
+wallet**: the provider owns the round and calls our callback for every money
+movement. See `docs/providers/betskilla.md` and `docs/providers/gregmorn.md`.
+
+The wallet callback route is registered under the *active* aggregator's name
+(`/webhooks/aggregator/<name>/wallet`), with `/webhooks/aggregator/gregmorn/wallet`
+kept as an alias for existing deployments. When adding a provider, implement
+`verifyCallback`, `parseWalletCallback`, `walletResponse` and `walletError` on
+the adapter — the route and the settlement service are provider-agnostic.
+
+A `verifyCallback` that always returns `false` is the failure mode to watch for:
+the game still launches, but it runs on the provider's own balance instead of the
+player's, which reads as "there is no balance in the game". `GET /webhooks/health`
+reports whether the bridge is armed.
+
 ## Gotchas
 
 - BetSkilla's operator host does **not** answer 401/403 when its session dies. It answers

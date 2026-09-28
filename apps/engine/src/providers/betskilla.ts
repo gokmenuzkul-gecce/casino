@@ -14,14 +14,18 @@ import {
   GameAggregatorAdapter,
   LaunchSessionRequest,
   LaunchSessionResult,
+  ParsedWalletCallback,
 } from "./aggregator.js";
 import { Errors } from "@aurora/shared";
+import { verifyHmac } from "../lib/http.js";
 
 interface BetSkillaConfig {
   baseUrl: string;
   login: string;
   password: string;
   currency: string;
+  /** Signs the seamless-wallet callbacks the hub sends back. */
+  callbackSecret: string;
 }
 
 interface Session {
@@ -206,6 +210,22 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
           demo: request.mode === "demo",
           currency: request.currency || this.config.currency,
           returnUrl: request.returnUrl,
+          /*
+           * The hub addresses the player by login and settles against our
+           * seamless-wallet callback under the same identity. Without these the
+           * session opens anonymously and plays on the hub's own balance, which
+           * is exactly the "no balance in the game" symptom.
+           */
+          ...(request.mode === "demo"
+            ? {}
+            : {
+                login: request.playerLogin ?? request.playerId,
+                userId: request.playerId,
+                sessionToken: request.sessionToken,
+                // Only sent when the caller resolved our public callback host;
+                // otherwise the hub's panel default applies.
+                ...(request.callbackUrlOverride ? { callbackUrl: request.callbackUrlOverride } : {}),
+              }),
         }),
       },
     );
@@ -233,10 +253,50 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
     return null;
   }
 
-  verifyCallback(): boolean {
-    // Sessions are opened and settled inside the operator platform, so there is
-    // no inbound signed wallet callback for us to verify.
-    return false;
+  /**
+   * The hub signs seamless-wallet callbacks with HMAC-SHA256 over the exact raw
+   * JSON body, using the merchant callback secret. Returning false here is what
+   * keeps `/webhooks/aggregator/betskilla/wallet` rejecting every request, so a
+   * blank secret disables the wallet bridge rather than silently accepting one.
+   */
+  verifyCallback(rawBody: string, headers: Record<string, string | undefined>): boolean {
+    if (!this.config.callbackSecret) return false;
+    const signature = headers["x-signature"] ?? headers["X-Signature"] ?? headers["signature"];
+    if (!signature) return false;
+    return verifyHmac(this.config.callbackSecret, rawBody, signature);
+  }
+
+  /**
+   * Reduce a hub wallet callback to the normalised shape. The hub speaks the
+   * same command envelope as Gregmorn (`cmd` + `login` + `bet`/`win`), so the
+   * mapping is identical; anything else is not a wallet command we can settle.
+   */
+  parseWalletCallback(payload: Record<string, unknown>): ParsedWalletCallback | null {
+    const cmd = String(payload.cmd ?? "");
+    const command =
+      cmd === "getBalance" ? "BALANCE" : cmd === "writeBet" ? "WRITE_BET" : cmd === "rollback" ? "ROLLBACK" : null;
+    if (!command) return null;
+
+    return {
+      command,
+      playerLogin: String(payload.login ?? payload.userId ?? ""),
+      transactionId: String(payload.transactionId ?? ""),
+      bet: optionalAmount(payload.bet),
+      win: optionalAmount(payload.win),
+      sessionId: payload.sessionid === undefined ? undefined : String(payload.sessionid),
+      gameId: payload.gameId === undefined ? undefined : String(payload.gameId),
+      roundId: payload.roundId === undefined ? undefined : String(payload.roundId),
+      roundFinished: typeof payload.round_finished === "boolean" ? payload.round_finished : undefined,
+      info: payload.info === undefined ? undefined : String(payload.info),
+    };
+  }
+
+  walletResponse(input: { login: string; balance: string; currency: string }): Record<string, unknown> {
+    return { balance: Number(input.balance), currency: input.currency, error: "", login: input.login, status: "success" };
+  }
+
+  walletError(input: { login: string; currency: string; message: string }): Record<string, unknown> {
+    return { balance: 0, currency: input.currency, error: input.message, login: input.login, status: "fail" };
   }
 
   async healthCheck(): Promise<ProviderHealth> {
@@ -254,6 +314,12 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
     try {
       await this.cookie();
       const data = await this.call<{ count: number }>("/api/v3/games?type=slot&limit=1");
+      // Whether the wallet bridge is armed matters more than the catalogue: with
+      // an empty secret the games still open, but they run on the hub's balance
+      // rather than the player's, so the detail says so explicitly.
+      const wallet = this.config.callbackSecret
+        ? "Cuzdan kopru aktif: oturumlar oyuncu bakiyesine baglanir."
+        : "Cuzdan kopru KAPALI (BETSKILLA_CALLBACK_SECRET bos): oyunlar oyuncu bakiyesine baglanmaz.";
       return {
         kind: this.kind,
         provider: this.name,
@@ -261,7 +327,7 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
         configured: true,
         reachable: true,
         checkedAt: new Date().toISOString(),
-        detail: `Operator oturumu aktif, katalogda ${data.count} slot oyunu.`,
+        detail: `Operator oturumu aktif, katalogda ${data.count} slot oyunu. ${wallet}`,
       };
     } catch (error) {
       return {
@@ -289,4 +355,12 @@ interface RawGame {
     label?: string;
     images?: { smallLight?: string; smallDark?: string };
   };
+}
+
+/** Bet/win amounts arrive as number or string by vendor; normalise to string. */
+function optionalAmount(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : undefined;
+  const text = String(value).trim();
+  return text === "" ? undefined : text;
 }

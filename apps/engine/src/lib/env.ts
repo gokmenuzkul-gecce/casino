@@ -90,12 +90,17 @@ export const env = {
    * BetSkilla white-label hub (Xenzora/Kingsbet). Games, session launch and the
    * player session all live behind the operator brand's own `/api` gateway, so
    * the brand host is the only required value; the rest are optional overrides.
+   *
+   * `callbackSecret` signs the seamless-wallet callbacks the hub sends back:
+   * without it the wallet bridge stays inert and games run on the hub's own
+   * balance instead of the player's.
    */
   betskilla: {
     baseUrl: str("BETSKILLA_BASE_URL"),
     login: str("BETSKILLA_LOGIN"),
     password: str("BETSKILLA_PASSWORD"),
-    currency: str("BETSKILLA_CURRENCY", "INR"),
+    currency: str("BETSKILLA_CURRENCY", str("CURRENCY", "TRY")),
+    callbackSecret: str("BETSKILLA_CALLBACK_SECRET", str("GAME_AGGREGATOR_CALLBACK_SECRET")),
   },
 
   psp: {

@@ -84,6 +84,7 @@ export function buildAggregator(): GameAggregatorAdapter {
       login: env.betskilla.login,
       password: env.betskilla.password,
       currency: env.betskilla.currency,
+      callbackSecret: env.betskilla.callbackSecret,
     });
     return betskilla.isConfigured ? betskilla : new DisabledAggregator();
   }

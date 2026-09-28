@@ -362,8 +362,9 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       ip: request.ip,
       userAgent: request.headers["user-agent"],
       // Explicit per-session callback URL, so the provider settles against this
-      // deployment rather than whatever default sits in its admin panel.
-      callbackUrlOverride: `${env.apiPublicUrl}/webhooks/aggregator/gregmorn/wallet`,
+      // deployment rather than whatever default sits in its admin panel. Built
+      // from the active adapter's own name, so it follows GAME_AGGREGATOR.
+      callbackUrlOverride: `${env.apiPublicUrl}/webhooks/aggregator/${registry.gameAggregator.name}/wallet`,
     });
 
     return { internal: false, ...result };
