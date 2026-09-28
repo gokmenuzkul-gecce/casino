@@ -71,7 +71,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/games/providers", async () => {
     const rows = await prisma.gameProviderModel.findMany({
-      where: { isActive: true },
+      where: { isActive: true, games: { some: { isActive: true } } },
       orderBy: { priority: "desc" },
       include: { _count: { select: { games: { where: { isActive: true } } } } },
     });

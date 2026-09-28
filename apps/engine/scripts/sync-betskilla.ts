@@ -164,7 +164,7 @@ async function main(): Promise<void> {
   // live one; anything without a counterpart is left untouched so no game is
   // lost.
   const managedProviders = await prisma.gameProviderModel.findMany({
-    where: { games: { some: { embedType: "EXTERNAL", isActive: true } } },
+    where: { games: { some: { embedType: "EXTERNAL" } } },
     select: { id: true, name: true, slug: true, type: true },
   });
   const managedExternalIds = new Set(
