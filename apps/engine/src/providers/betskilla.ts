@@ -73,8 +73,8 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
     return this.login();
   }
 
-  /** Runs an API call, re-authenticating once if the session expired. */
-  private async call<T>(path: string, init: RequestInit = {}): Promise<T> {
+  /** Runs an API call with session cookies, re-authenticating once on expiry. */
+  private async request(path: string, init: RequestInit = {}): Promise<Response> {
     const doFetch = async (cookie: string) => {
       return fetch(`${this.config.baseUrl}${path}`, {
         ...init,
@@ -94,11 +94,47 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
       this.session = null;
       response = await doFetch(await this.cookie());
     }
+    return response;
+  }
+
+  /** Runs an API call, throwing on failure. */
+  private async call<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const response = await this.request(path, init);
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       throw Errors.providerError(this.name, `HTTP ${response.status}: ${detail.slice(0, 200)}`);
     }
     return (await response.json()) as T;
+  }
+
+  /**
+   * Checks whether a session can actually be minted for a game.
+   *
+   * The catalogue lists some entries whose upstream launch answers 404 (whole
+   * providers in some cases), so publishing a game without probing it produces
+   * tiles that are guaranteed to fail when a player clicks them. A throwaway
+   * demo session is the cheapest reliable signal.
+   */
+  async isPlayable(router: string): Promise<boolean> {
+    if (!this.isConfigured || !router) return false;
+    try {
+      const response = await this.request(`/api/games/${encodeURIComponent(router)}`, {
+        method: "POST",
+        body: JSON.stringify({
+          demo: true,
+          currency: this.config.currency,
+          returnUrl: `${this.config.baseUrl}/`,
+        }),
+      });
+      if (response.ok) {
+        await response.arrayBuffer().catch(() => undefined);
+        return true;
+      }
+      await response.body?.cancel().catch(() => undefined);
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   async listGames(params: {

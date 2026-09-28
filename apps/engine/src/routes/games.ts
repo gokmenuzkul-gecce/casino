@@ -25,6 +25,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
         ? [
             { name: { contains: query.search, mode: "insensitive" as const } },
             { tags: { has: query.search.toLowerCase() } },
+            { provider: { name: { contains: query.search, mode: "insensitive" as const } } },
           ]
         : undefined,
     };
