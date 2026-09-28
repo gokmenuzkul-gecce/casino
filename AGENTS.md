@@ -163,3 +163,15 @@ precisely so this is visible instead of assumed.
   Always run `tsc --noEmit` after bulk text edits.
 - `public/` was empty historically, so every DB-referenced image 404'd into the SPA fallback.
   If images vanish again, check the proxy is serving `public/` before touching components.
+- The player money flow has a credential-free end-to-end check: `npm run e2e:player`
+  in `apps/engine` registers a throwaway account against a running engine, deposits,
+  bets through the internal engine and asserts the ledger delta equals
+  `payout - stake`. Use it to tell "the platform is broken" apart from "one provider
+  is unconfigured". `GET /api/wallet` returns `real`/`bonus`/`demo`/`locked`/`available`,
+  not a currency map — reading `balances.TRY` silently yields `undefined`.
+- `GAME_AGGREGATOR` decides which adapter is active. With it set to `betskilla` the
+  Gregmorn adapter is never constructed, so Gregmorn credentials in the panel have no
+  effect until the profile is switched. Switching away also disables the working
+  BetSkilla launches, so it is a cutover, not an addition.
+- External provider launches (BetSkilla) really do open sessions (`qtlauncher.com`),
+  so a working external launch is not evidence that Gregmorn is configured.
