@@ -58,7 +58,7 @@ export function ChatWidget() {
         style={{ position: "fixed", bottom: 24, left: 24, zIndex: 500, borderRadius: 99, padding: "12px 20px", boxShadow: "var(--shadow)" }}
         onClick={() => setOpen(true)}
       >
-        Sohbet
+        Chat
       </button>
     );
   }
@@ -69,7 +69,7 @@ export function ChatWidget() {
       style={{ position: "fixed", bottom: 24, left: 24, width: 340, zIndex: 500, boxShadow: "var(--shadow)" }}
     >
       <div className="row-between mb">
-        <span className="bold">Lobi Sohbeti</span>
+        <span className="bold">Lobby Chat</span>
         <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>✕</button>
       </div>
 

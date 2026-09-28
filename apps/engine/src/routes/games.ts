@@ -53,6 +53,25 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
+  /**
+   * Public CMS lookup for footer/legal pages. Only published rows are exposed;
+   * drafts stay admin-only, so this needs no authentication but leaks nothing.
+   */
+  app.get("/cms/pages/:slug", async (request) => {
+    const { slug } = request.params as { slug: string };
+    const page = await prisma.cmsPage.findUnique({ where: { slug } });
+    if (!page || page.status !== "PUBLISHED") throw Errors.notFound("Sayfa");
+    return {
+      page: {
+        slug: page.slug,
+        title: page.title,
+        content: page.content,
+        locale: page.locale,
+        publishedAt: page.publishedAt,
+      },
+    };
+  });
+
   app.get("/games/categories", async () => {
     const rows = await prisma.gameCategoryModel.findMany({
       where: { isActive: true },

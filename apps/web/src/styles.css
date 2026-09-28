@@ -1,65 +1,79 @@
 /* ============================================================
    Aurora — iGaming design system
-   Dark, premium, dense. Palette:
-     base     #080A0F
-     surfaces #10131A / #161A23 / #1D222D
-     gold     #D6A84F
-     violet   #8B5CF6
+   Dark, dense, red-accented. Tokens mirror the reference theme
+   exactly (see apps/web/src/styles.css tokens below).
+
+   brand ramp   #fb4954 → #81071b  (500 = #c5132f)
+   dark ramp    #09090b → #3f3f46
+   text         #ffffff on rgba(255,255,255,.1) strokes
    ============================================================ */
 
 :root {
-  /* ── base ── */
+  /* ── brand ramp ── */
+  --primary: #c5132f;
+  --primary-bright: #e71d3a;
+  --primary-dim: #a20c25;
+  --brand-0: #fecdd0;
+  --brand-100: #fb4954;
+  --brand-200: #f82441;
+  --brand-300: #e71d3a;
+  --brand-400: #d61734;
+  --brand-500: #c5132f;
+  --brand-600: #b40f2a;
+  --brand-700: #a20c25;
+  --brand-800: #910920;
+  --brand-900: #81071b;
+  /* Legacy aliases kept so existing rules resolve to the new ramp. */
+  --gold: var(--brand-300);
+  --gold-bright: var(--brand-100);
+  --gold-dim: var(--brand-700);
+  --accent: var(--brand-200);
+
+  /* ── dark ramp ── */
   --bg: #09090b;
-  --bg-elev: #121215;
-  --bg-elev-2: #1b1b1f;
-  --bg-elev-3: #212125;
-  --bg-elev-4: #27272c;
-  --border: #27272c;
-  --border-bright: #3f3f46;
-  --border-gold: rgba(233, 29, 58, 0.35);
+  --bg-elev: #212125;
+  --bg-elev-2: #2d2d32;
+  --bg-elev-3: #39393f;
+  --bg-elev-4: #3f3f46;
+  --bg-elev-5: #333339;
+  --bg-elev-6: #27272c;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-bright: rgba(255, 255, 255, 0.2);
+  --border-gold: rgba(197, 19, 47, 0.35);
 
   /* ── text ── */
-  --text: #f8fafc;
-  --text-dim: #a1a1aa;
-  --text-faint: #71717a;
-
-  /* ── brand ── */
-  --primary: #e71d3a;
-  --primary-bright: #f82441;
-  --primary-dim: #c5132f;
-  --gold: #e71d3a;
-  --gold-bright: #fb4954;
-  --gold-dim: #a20c25;
-  --accent: #f82441;
+  --text: #ffffff;
+  --text-dim: rgba(255, 255, 255, 0.75);
+  --text-faint: rgba(255, 255, 255, 0.5);
 
   /* ── semantic ── */
   --success: #09a119;
   --danger: #ff2642;
-  --warning: #f59e0b;
+  --warning: #fedd65;
   --info: #096ff4;
 
   /* ── category accents ── */
-  --cat-slots: #e71d3a;
+  --cat-slots: var(--brand-300);
   --cat-live: #ff2642;
   --cat-table: #096ff4;
-  --cat-crash: #f82441;
+  --cat-crash: var(--brand-200);
   --cat-instant: #09a119;
-  --cat-jackpot: #fb4954;
-  --cat-lottery: #f59e0b;
+  --cat-jackpot: var(--brand-100);
+  --cat-lottery: #fedd65;
   --cat-sports: #3bbe49;
 
   /* ── shape ── */
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
-  --radius-xs: 6px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 10px;
+  --radius-xs: 4px;
 
   /* ── depth ── */
-  --shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.7);
-  --shadow-glow: 0 0 40px rgba(231, 29, 58, 0.28);
-  --shadow-gold: 0 0 32px rgba(231, 29, 58, 0.26);
+  --shadow: 0 5px 20px rgba(9, 13, 25, 0.1);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 40px rgba(197, 19, 47, 0.28);
+  --shadow-gold: 0 0 32px rgba(197, 19, 47, 0.26);
 
   /* ── motion ── */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -70,7 +84,7 @@
   /* ── type ── */
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  --mono: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* ── layout ── */
   --header-h: 68px;
@@ -125,7 +139,7 @@ input, select, textarea { font-family: inherit; }
 
 .header {
   position: sticky; top: 0; z-index: 100;
-  background: rgba(8, 10, 15, 0.82);
+  background: rgba(9, 9, 11, 0.92);
   backdrop-filter: blur(22px) saturate(160%);
   -webkit-backdrop-filter: blur(22px) saturate(160%);
   border-bottom: 1px solid var(--border);
@@ -137,7 +151,7 @@ input, select, textarea { font-family: inherit; }
 .logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: -0.6px; }
 .logo-mark {
   width: 36px; height: 36px; border-radius: 11px;
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold) 55%, var(--gold-dim));
+  background: linear-gradient(160deg, var(--brand-300), var(--brand-500) 60%, var(--brand-800));
   display: grid; place-items: center; font-size: 18px; color: #ffffff;
   box-shadow: var(--shadow-gold); flex-shrink: 0;
 }
@@ -150,10 +164,10 @@ input, select, textarea { font-family: inherit; }
   white-space: nowrap; position: relative;
 }
 .nav-link:hover { color: var(--text); background: var(--bg-elev-2); }
-.nav-link.active { color: var(--gold); background: rgba(231, 29, 58, 0.1); }
+.nav-link.active { color: var(--brand-100); background: rgba(197, 19, 47, 0.1); }
 .nav-link.active::after {
   content: ""; position: absolute; left: 15px; right: 15px; bottom: 2px;
-  height: 2px; border-radius: 2px; background: var(--gold);
+  height: 2px; border-radius: 2px; background: var(--brand-300);
 }
 .header-actions { display: flex; align-items: center; gap: 10px; }
 
@@ -168,14 +182,14 @@ input, select, textarea { font-family: inherit; }
   color: var(--text-faint); pointer-events: none;
 }
 .header-search-input {
-  width: 100%; padding: 9px 13px 9px 35px;
+  width: 100%; padding: 8px 10px 8px 35px; height: 40px;
   background: var(--bg-elev-2); border: 1px solid var(--border);
-  border-radius: 99px; color: var(--text); font-size: 13.5px;
+  border-radius: var(--radius-sm); color: var(--text); font-size: 14px; font-weight: 600;
   transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
 .header-search-input::placeholder { color: var(--text-faint); }
 .header-search-input:focus {
-  outline: none; border-color: var(--border-gold); background: var(--bg-elev-3);
+  outline: none; border-color: var(--border-bright); background: var(--bg-elev-3);
 }
 
 /* ── header icon button ─────────────────────────────────── */
@@ -186,7 +200,7 @@ input, select, textarea { font-family: inherit; }
   background: var(--bg-elev-2); border: 1px solid var(--border);
   transition: all var(--t-fast) var(--ease); flex-shrink: 0;
 }
-.header-icon-btn:hover { color: var(--gold); border-color: var(--border-gold); background: var(--bg-elev-3); }
+.header-icon-btn:hover { color: var(--brand-100); border-color: var(--border-gold); background: var(--bg-elev-3); }
 .header-icon-dot {
   position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px;
   padding: 0 4px; border-radius: 99px; background: var(--danger); color: #fff;
@@ -206,10 +220,16 @@ input, select, textarea { font-family: inherit; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn:active:not(:disabled) { transform: scale(0.985); }
 .btn-primary {
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold) 50%, #b8862f);
-  color: #ffffff; box-shadow: 0 4px 18px rgba(231, 29, 58, 0.22);
+  background: var(--accent--bg, #c5132f);
+  color: #fff;
+  border: 1px solid rgba(197, 19, 47, 0.4);
+  /* Stacked 2px "3D" lip under the button, as in the reference. */
+  box-shadow: 0 2px 0 0 var(--brand-200), 0 3px 0 0 var(--brand-300);
 }
-.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-gold); }
+.btn-primary:hover:not(:disabled) {
+  background: var(--brand-400);
+  box-shadow: 0 2px 0 0 var(--brand-200), 0 3px 0 0 var(--brand-300), 0 6px 16px 0 rgba(197, 19, 47, 0.9);
+}
 .btn-success { background: var(--success); color: #04140e; }
 .btn-success:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 24px rgba(16, 185, 129, 0.35); }
 .btn-danger { background: var(--danger); color: #fff; }
@@ -218,10 +238,10 @@ input, select, textarea { font-family: inherit; }
 .btn-ghost:hover:not(:disabled) { background: var(--bg-elev-3); border-color: var(--border-bright); }
 .btn-violet { background: linear-gradient(135deg, var(--primary-bright), var(--primary)); color: #fff; }
 .btn-violet:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-glow); }
-.btn-sm { padding: 7px 13px; font-size: 13px; }
-.btn-lg { padding: 14px 30px; font-size: 16px; border-radius: var(--radius); }
+.btn-sm { padding: 8px 16px; font-size: 13px; }
+.btn-lg { padding: 11px 20px; font-size: 15px; border-radius: var(--radius); }
 .btn-block { width: 100%; }
-.btn-gold { background: linear-gradient(135deg, var(--gold-bright), var(--gold)); color: #ffffff; }
+.btn-gold { background: var(--brand-500); color: #ffffff; border: 1px solid rgba(197, 19, 47, 0.4); }
 
 /* Async button: swap the label for a spinner without changing width. */
 .btn-loading { color: transparent !important; pointer-events: none; }
@@ -271,12 +291,12 @@ input, select, textarea { font-family: inherit; }
 
 .game-tile {
   position: relative; border-radius: var(--radius); overflow: hidden;
-  background: var(--bg-elev-2); border: 1px solid var(--border);
+  background: var(--bg-elev); border: 1px solid var(--border);
   cursor: pointer;
-  transition: transform var(--t-mid) var(--ease), border-color var(--t-mid) var(--ease), box-shadow var(--t-mid) var(--ease);
+  transition: border-color var(--t-mid) var(--ease), box-shadow var(--t-mid) var(--ease);
   aspect-ratio: 1 / 1; display: flex; flex-direction: column;
 }
-.game-tile:hover { transform: translateY(-4px); border-color: var(--border-bright); box-shadow: var(--shadow); }
+.game-tile:hover { border-color: rgba(197, 19, 47, 0.55); box-shadow: var(--shadow); }
 .game-tile-art {
   flex: 1; display: grid; place-items: center; font-size: 44px;
   background: linear-gradient(150deg, var(--tile-color, var(--primary)), transparent 130%);
@@ -287,28 +307,52 @@ input, select, textarea { font-family: inherit; }
   background: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.14), transparent 60%);
 }
 .game-tile-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Title plate over the art, bottom-anchored with a fade — matches the reference card. */
 .game-tile-name {
-  padding: 9px 11px; font-size: 13px; font-weight: 700;
-  background: var(--bg-elev); border-top: 1px solid var(--border);
+  position: absolute; left: 0; right: 0; bottom: 26px; z-index: 2;
+  padding: 26px 11px 0;
+  font-family: "Passion One", Impact, sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 0.2px;
+  background: linear-gradient(180deg, transparent 0%, rgba(9, 9, 11, 0.85) 55%, rgba(9, 9, 11, 0.95) 100%);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Provider footer sitting under the title inside the same gradient plate. */
+.game-tile-info {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 0 11px 8px; font-size: 11px; color: var(--text-faint);
+  background: rgba(9, 9, 11, 0.95);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* "Play" affordance that slides up on hover, mirroring the reference card. */
+.game-tile::before {
+  content: "Play"; position: absolute; left: 50%; top: 50%; z-index: 3;
+  transform: translate(-50%, -50%) scale(0.9);
+  padding: 8px 22px; border-radius: var(--radius-xs);
+  background: linear-gradient(180deg, var(--brand-800) 0%, var(--brand-500) 100%);
+  border: 1px solid rgba(197, 19, 47, 0.4);
+  box-shadow: 0 2px 0 0 var(--brand-200), 0 3px 0 0 var(--brand-200);
+  font-weight: 800; font-size: 13px;
+  opacity: 0; transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+  pointer-events: none;
+}
+.game-tile:hover::before { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .badge {
-  position: absolute; top: 8px; left: 8px; z-index: 2;
+  position: absolute; top: 8px; left: 8px; z-index: 4;
   padding: 3px 8px; border-radius: var(--radius-xs); font-size: 10px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-.badge-new { background: var(--accent); color: #04222a; }
+.badge-new { background: var(--brand-500); color: #fff; }
 .badge-hot { background: var(--danger); color: #fff; }
-.badge-jackpot { background: linear-gradient(135deg, var(--gold-bright), var(--gold)); color: #ffffff; }
+.badge-jackpot { background: var(--brand-500); color: #ffffff; }
 .fav-btn {
-  position: absolute; top: 6px; right: 6px; z-index: 2;
+  position: absolute; top: 6px; right: 6px; z-index: 4;
   width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
   background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(6px); font-size: 13px;
   opacity: 0; transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
 }
 .game-tile:hover .fav-btn { opacity: 1; }
 .fav-btn:hover { transform: scale(1.12); }
-.fav-btn.on { opacity: 1; color: var(--gold); }
+.fav-btn.on { opacity: 1; color: var(--brand-100); }
 
 /* ── stats ──────────────────────────────────────────────── */
 
@@ -511,6 +555,75 @@ input, select, textarea { font-family: inherit; }
 .hero-art-card:nth-child(3) { transform: translateY(-30px) rotate(-2deg); animation-delay: 0.25s; }
 .hero-art-card img { width: 100%; height: 100%; object-fit: cover; }
 
+/* ── home hero slider ───────────────────────────────────── */
+
+.hero-slider {
+  position: relative; border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid var(--border-bright); margin-bottom: 20px;
+  aspect-ratio: 1600 / 560; background: var(--bg-elev-2);
+}
+.hero-slide {
+  position: absolute; inset: 0; opacity: 0;
+  transition: opacity 420ms var(--ease);
+  pointer-events: none;
+}
+.hero-slide.on { opacity: 1; pointer-events: auto; }
+.hero-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-slide-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(9, 9, 11, 0.62); color: #fff; border: 1px solid var(--border);
+  backdrop-filter: blur(6px); transition: background var(--t-fast) var(--ease);
+}
+.hero-slide-nav:hover { background: rgba(9, 9, 11, 0.85); }
+.hero-slide-nav.prev { left: 14px; }
+.hero-slide-nav.next { right: 14px; }
+.hero-slide-dots {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3;
+  display: flex; gap: 7px;
+}
+.hero-slide-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35); border: none; padding: 0;
+  transition: background var(--t-fast) var(--ease), width var(--t-fast) var(--ease);
+}
+.hero-slide-dot.on { background: #fff; width: 22px; border-radius: 99px; }
+
+/* ── jackpot row ────────────────────────────────────────── */
+
+.jackpot-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  margin-bottom: 24px;
+}
+.jackpot-card {
+  position: relative; border-radius: var(--radius); overflow: hidden;
+  padding: 18px 20px; text-align: center;
+  background: var(--bg-elev); border: 1px solid var(--border);
+}
+.jackpot-card::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 90% 80% at 50% 0%, var(--tier-glow, transparent), transparent 70%);
+  pointer-events: none;
+}
+.jackpot-card.tier-gold { --tier-glow: rgba(254, 221, 101, 0.16); --tier-accent: #fedd65; }
+.jackpot-card.tier-silver { --tier-glow: rgba(220, 226, 234, 0.14); --tier-accent: #dce2ea; }
+.jackpot-card.tier-bronze { --tier-glow: rgba(214, 132, 84, 0.16); --tier-accent: #d68454; }
+.jackpot-card-amount {
+  position: relative; font-family: "Passion One", Impact, sans-serif;
+  font-size: 27px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--tier-accent, var(--text)); font-variant-numeric: tabular-nums;
+}
+.jackpot-card-tier {
+  position: relative; margin-top: 3px;
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1.1px; color: var(--text-faint);
+}
+.jackpot-card-winner {
+  position: relative; margin-top: 11px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--text-faint);
+}
+
 /* ── jackpot ticker ─────────────────────────────────────── */
 
 .jackpot-bar {
@@ -553,14 +666,14 @@ input, select, textarea { font-family: inherit; }
 .chip-row::-webkit-scrollbar { display: none; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
-  padding: 9px 15px; border-radius: 99px; font-size: 13.5px; font-weight: 700;
+  padding: 9px 15px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 700;
   background: var(--bg-elev-2); border: 1px solid var(--border); color: var(--text-dim);
   transition: all var(--t-fast) var(--ease); white-space: nowrap;
 }
-.chip:hover { background: var(--bg-elev-3); color: var(--text); border-color: var(--border-bright); transform: translateY(-1px); }
+.chip:hover { background: var(--bg-elev-3); color: var(--text); border-color: var(--border-bright); }
 .chip.active {
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
-  color: #ffffff; border-color: transparent; box-shadow: var(--shadow-gold);
+  background: var(--brand-500);
+  color: #ffffff; border-color: rgba(197, 19, 47, 0.4); box-shadow: var(--shadow-gold);
 }
 .chip-count { font-size: 11px; opacity: 0.72; font-weight: 800; }
 .chip-icon { font-size: 15px; line-height: 1; }
@@ -627,6 +740,7 @@ input, select, textarea { font-family: inherit; }
 /* ── promo banners ──────────────────────────────────────── */
 
 .promo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 16px; }
+.promo-grid-3 { grid-template-columns: repeat(3, 1fr); }
 .promo-card {
   position: relative; border-radius: var(--radius); overflow: hidden;
   border: 1px solid var(--border); min-height: 158px;
@@ -826,6 +940,13 @@ input, select, textarea { font-family: inherit; }
 
   .live-grid { grid-template-columns: repeat(2, 1fr); gap: 11px; }
   .promo-grid { grid-template-columns: 1fr; }
+  .promo-grid-3 { grid-template-columns: 1fr; }
+  .jackpot-row { grid-template-columns: 1fr; gap: 10px; }
+  .jackpot-card { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; }
+  .jackpot-card-winner { margin-top: 0; padding-top: 0; border-top: none; }
+  .jackpot-card-amount { font-size: 21px; }
+  .hero-slider { aspect-ratio: 1 / 1; }
+  .hero-slide-nav { width: 32px; height: 32px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 22px; padding: 30px 14px 22px; }
   .footer-bottom { padding: 16px 14px; flex-direction: column; align-items: flex-start; }
 

@@ -90,7 +90,7 @@ export default function BlackjackBoard({ slug, name }: { slug: string; name: str
             Dur (STAND)
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => addAction("DOUBLE")} disabled={bet.placing}>
-            2x Bahis (DOUBLE)
+            2x Bet (DOUBLE)
           </button>
           <button className="btn btn-ghost btn-sm" onClick={reset} disabled={bet.placing}>
             ↺ Temizle

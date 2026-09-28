@@ -67,7 +67,7 @@ export function VipPage() {
               <div className="bold" style={{ fontSize: 17, color: tier.color }}>{tier.name}</div>
               {data.current?.tier === tier.tier && <Pill kind="vip">SIZIN SEVIYENIZ</Pill>}
             </div>
-            <div className="small muted mb">Min bahis: {money(tier.minWagered)}</div>
+            <div className="small muted mb">Min bet: {money(tier.minWagered)}</div>
             <div className="col" style={{ gap: 5 }}>
               <div className="row-between small"><span className="muted">Cashback</span><span className="bold">%{tier.cashbackPercent}</span></div>
               <div className="row-between small"><span className="muted">Haftalik</span><span className="bold">{money(tier.weeklyBonus)}</span></div>
@@ -164,7 +164,7 @@ export function TournamentsPage() {
       <h1 className="section-title" style={{ marginTop: 0 }}>Tournaments</h1>
 
       {tournaments.length === 0 ? (
-        <Empty icon="🎯" title="Su anda aktif turnuva yok" hint="Yakin zamanda yeni turnuvalar eklenecek" />
+        <Empty icon="🎯" title="No active tournaments right now" hint="New tournaments will be added soon" />
       ) : (
         <div className="grid grid-2">
           {tournaments.map((tournament) => (
@@ -261,11 +261,10 @@ export function LivePage() {
             <span className="live-dot" /> GERCEK KRUPIYELER
           </span>
           <h1 className="hero-title" style={{ fontSize: "clamp(26px, 3.4vw, 40px)" }}>
-            Canli Casino
+            Live Casino
           </h1>
           <p className="hero-sub" style={{ marginBottom: 0, maxWidth: 620 }}>
-            Gercek masalar, gercek krupiyeler. Oyun agregatoru API bilgileri girildiginde canli rulet, blackjack, baccarat
-            ve game show masalari bu bolumde otomatik olarak listelenir.
+            Real tables, real dealers. Live roulette, blackjack, baccarat and game show tables are listed here automatically once the aggregator API credentials are entered.
           </p>
         </div>
       </section>
@@ -288,7 +287,7 @@ export function LivePage() {
           <div key={group.key}>
             <div className="section-title">
               {group.icon} {group.label}
-              <span className="count">{group.rows.length} masa</span>
+              <span className="count">{group.rows.length} tables</span>
             </div>
             <div className="live-grid">
               {group.rows.map((game) => (
@@ -343,8 +342,7 @@ export function FairnessPage() {
 
       <div className="card mb">
         <p className="small muted">
-          Her tur icin sunucu tohumunun SHA-256 ozeti tur basinda yayinlanir. Tur bittiginde tohum aciklanir; bu araç ayni
-          sonucu bagimsiz olarak yeniden hesaplar ve kayitli sonucla karsilastirir.
+          The SHA-256 hash of the server seed is published before each round. When the round ends the seed is revealed; this tool recomputes the same result independently and compares it with the recorded outcome.
         </p>
       </div>
 

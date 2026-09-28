@@ -129,14 +129,14 @@ export function AuthModal({
           <>
             Hesabiniz yok mu?{" "}
             <button className="bold" style={{ color: "var(--primary-bright)" }} onClick={() => { setMode("register"); setError(null); }}>
-              Kayit olun
+              Register
             </button>
           </>
         ) : (
           <>
             Zaten hesabiniz var mi?{" "}
             <button className="bold" style={{ color: "var(--primary-bright)" }} onClick={() => { setMode("login"); setError(null); }}>
-              Giris yapin
+              Login
             </button>
           </>
         )}

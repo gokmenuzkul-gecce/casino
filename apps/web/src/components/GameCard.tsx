@@ -29,20 +29,20 @@ export interface GameCardData {
 }
 
 export const CATEGORY_META: Record<string, { icon: string; color: string; label: string }> = {
-  SLOTS: { icon: "🎰", color: "var(--cat-slots)", label: "Slot Oyunlari" },
-  LIVE_CASINO: { icon: "🃏", color: "var(--cat-live)", label: "Canli Casino" },
-  TABLE: { icon: "🎲", color: "var(--cat-table)", label: "Masa Oyunlari" },
+  SLOTS: { icon: "🎰", color: "var(--cat-slots)", label: "Slots" },
+  LIVE_CASINO: { icon: "🃏", color: "var(--cat-live)", label: "Live Casino" },
+  TABLE: { icon: "🎲", color: "var(--cat-table)", label: "Table Games" },
   CRASH: { icon: "📈", color: "var(--cat-crash)", label: "Crash" },
-  INSTANT: { icon: "⚡", color: "var(--cat-instant)", label: "Anlik Oyunlar" },
+  INSTANT: { icon: "⚡", color: "var(--cat-instant)", label: "Instant Games" },
   JACKPOT: { icon: "💰", color: "var(--cat-jackpot)", label: "Jackpot" },
-  LOTTERY: { icon: "🎱", color: "var(--cat-lottery)", label: "Keno & Piyango" },
-  FISHING: { icon: "🐟", color: "#0ea5e9", label: "Balikcilik" },
-  VIRTUAL: { icon: "🕹️", color: "#f82441", label: "Sanal" },
-  SPORTS: { icon: "⚽", color: "var(--cat-sports)", label: "Spor Bahis" },
+  LOTTERY: { icon: "🎱", color: "var(--cat-lottery)", label: "Keno & Lottery" },
+  FISHING: { icon: "🐟", color: "#0ea5e9", label: "Fishing" },
+  VIRTUAL: { icon: "🕹️", color: "#f82441", label: "Virtual" },
+  SPORTS: { icon: "⚽", color: "var(--cat-sports)", label: "Sports Betting" },
 };
 
 export const categoryMeta = (slug?: string | null) =>
-  (slug ? CATEGORY_META[slug] : undefined) ?? { icon: "🎮", color: "var(--primary)", label: "Oyun" };
+  (slug ? CATEGORY_META[slug] : undefined) ?? { icon: "🎮", color: "var(--primary)", label: "Game" };
 
 /**
  * Cover art for a game.
@@ -95,7 +95,7 @@ export function GameCard({
   const badge = game.isJackpot
     ? { text: "Jackpot", cls: "badge-jackpot" }
     : game.isNew
-      ? { text: "Yeni", cls: "badge-new" }
+      ? { text: "New", cls: "badge-new" }
       : game.isFeatured
         ? { text: "Popular", cls: "badge-hot" }
         : null;
@@ -131,6 +131,10 @@ export function GameCard({
         <img src={art.src} alt={game.name} loading="lazy" decoding="async" onError={art.onError} />
       </div>
       <div className="game-tile-name">{game.name}</div>
+      {/* Provider + like count, mirroring the reference card footer. */}
+      <div className="game-tile-info">
+        <span className="truncate">{game.provider?.name ?? meta.label}</span>
+      </div>
     </div>
   );
 }
@@ -184,7 +188,7 @@ export function LiveTableCard({ game }: { game: GameCardData }) {
     >
       <div className="live-card-art" style={{ ["--tile-color" as string]: game.themeColor ?? "#7f1d1d" }}>
         <span className="live-badge">
-          <span className="live-dot" /> Canli
+          <span className="live-dot" /> Live
         </span>
         <img src={art.src} alt={game.name} loading="lazy" decoding="async" onError={art.onError} />
       </div>

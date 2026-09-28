@@ -173,7 +173,7 @@ export function AccountPage() {
                         setSessions((prev) => prev.filter((s) => s.id !== session.id));
                       }}
                     >
-                      Kapat
+                      Disable
                     </button>
                   )}
                 </div>

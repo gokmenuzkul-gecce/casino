@@ -113,6 +113,14 @@ code paths; only the vendor's network is simulated.
 
 ## Gotchas
 
+- BetSkilla's operator host does **not** answer 401/403 when its session dies. It answers
+  `400 {"error":true,"code":266,"message":"game is not available"}`. The adapter caches one
+  cookie for its whole lifetime, so before `sessionExpired()` treated 400 as an expiry, a
+  long-running engine failed *every* launch with that opaque message until restarted —
+  while a freshly started process worked. `apps/engine/src/providers/betskilla.test.ts`
+  covers this against a real HTTP stub; do not narrow that check back to 401/403.
+- "Ministry of Information Technology" warning text does not exist anywhere in this repo.
+  It is xenzora.com's own licence banner, not a feature that was ever implemented here.
 - Do not edit JSX closing tags with `sed`; `>Text<h1>` style replacements silently break JSX.
   Always run `tsc --noEmit` after bulk text edits.
 - `public/` was empty historically, so every DB-referenced image 404'd into the SPA fallback.

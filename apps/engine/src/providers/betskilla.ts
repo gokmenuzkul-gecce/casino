@@ -89,12 +89,26 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
       });
     };
 
+    // A cached session that fails may simply have aged out, so drop it and try
+    // once more with a fresh login. A login performed *within* this call cannot
+    // be stale, so its failure is a genuine game error and is not retried.
+    const hadSession = this.session !== null;
     let response = await doFetch(await this.cookie());
-    if (response.status === 401 || response.status === 403) {
+    if (hadSession && this.sessionExpired(response.status)) {
       this.session = null;
       response = await doFetch(await this.cookie());
     }
     return response;
+  }
+
+  /**
+   * The operator host does not answer 401/403 for a dead session. It answers
+   * 400 with `{"error":true,"code":266,"message":"game is not available"}`.
+   * Once the in-memory cookie ages out, every launch fails forever because
+   * nothing else triggers a re-login — so 400 has to count as an expiry too.
+   */
+  private sessionExpired(status: number): boolean {
+    return status === 401 || status === 403 || status === 400;
   }
 
   /** Runs an API call, throwing on failure. */

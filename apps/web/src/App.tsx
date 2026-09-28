@@ -8,6 +8,7 @@ import { CrashPage } from "./pages/CrashPage";
 import { WalletPage, PromotionsPage } from "./pages/WalletPage";
 import { AccountPage, KycPage, HistoryPage } from "./pages/AccountPage";
 import { VipPage, LeaderboardPage, TournamentsPage, LivePage, FairnessPage } from "./pages/MiscPages";
+import { CmsPage } from "./pages/CmsPage";
 import { ChatWidget } from "./components/ChatWidget";
 import { LogoMark } from "./components/Header";
 import { AdminLayout } from "./admin/AdminLayout";
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/tournaments" element={<TournamentsPage />} />
           <Route path="/fairness" element={<FairnessPage />} />
+          <Route path="/cms/:slug" element={<CmsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -113,10 +115,10 @@ function Footer() {
         <div>
           <div className="footer-col-title">Legal</div>
           <Link to="/cms/sorumlu-oyun" className="footer-link">Responsible Gaming</Link>
-          <Link to="/cms/cerezler" className="footer-link">Cookie Files</Link>
-          <Link to="/cms/guvenlik" className="footer-link">Security</Link>
+          <Link to="/cms/gizlilik" className="footer-link">Cookie Files</Link>
+          <Link to="/cms/kullanim-sartlari" className="footer-link">Terms</Link>
           <Link to="/cms/hakkimizda" className="footer-link">About Us</Link>
-          <Link to="/fairness" className="footer-link">Affiliate</Link>
+          <Link to="/cms/sss" className="footer-link">FAQ</Link>
         </div>
 
         <div>

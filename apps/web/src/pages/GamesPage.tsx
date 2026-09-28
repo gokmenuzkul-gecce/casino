@@ -77,11 +77,30 @@ export function GamesPage() {
 
   useEffect(() => setSearchDraft(search), [search]);
 
+  /**
+   * Live search: the box was only wired to Enter and the "Ara" button, so
+   * typing appeared to do nothing. Filter as the player types, debounced so
+   * each keystroke does not fire a request. The draft is left alone here —
+   * syncing it from the URL is the effect above, and doing both cancels the
+   * keystroke that triggered the navigation.
+   */
+  useEffect(() => {
+    if (searchDraft === search) return;
+    const timer = setTimeout(() => update("search", searchDraft), 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft, search]);
+
+  /**
+   * Writes a filter into the URL. Changing a filter always returns to page 1,
+   * but paging must not reset itself: clearing `page` here made every page
+   * button a no-op, since it deleted the value it had just written.
+   */
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
-    next.delete("page");
+    if (key !== "page") next.delete("page");
     setParams(next);
   };
 
@@ -140,10 +159,10 @@ export function GamesPage() {
       <div className="col mb" style={{ gap: 8 }}>
         <div className="chip-row">
           <button className={`chip${!category && !flag ? " active" : ""}`} onClick={() => { update("category", ""); update("jackpot", ""); update("new", ""); }}>
-            <span className="chip-icon">🔥</span> Tumu
+            <span className="chip-icon">🔥</span> Show All
           </button>
           <button className={`chip${flag === "new" ? " active" : ""}`} onClick={() => { update("new", flag === "new" ? "" : "true"); update("category", ""); }}>
-            <span className="chip-icon">✨</span> Yeni
+            <span className="chip-icon">✨</span> New
           </button>
           <button className={`chip${flag === "jackpot" ? " active" : ""}`} onClick={() => { update("jackpot", flag === "jackpot" ? "" : "true"); update("category", ""); }}>
             <span className="chip-icon">💰</span> Jackpot
@@ -157,7 +176,7 @@ export function GamesPage() {
                 onClick={() => { update("category", category === c.slug ? "" : c.slug); update("jackpot", ""); update("new", ""); }}
               >
                 <span className="chip-icon">{meta.icon}</span>
-                {c.name}
+                {meta.label}
                 <span className="chip-count">{c.gameCount}</span>
               </button>
             );
@@ -167,7 +186,7 @@ export function GamesPage() {
         {providers.length > 0 && (
           <div className="provider-strip">
             <button className={`provider-logo${!provider ? " active" : ""}`} onClick={() => update("provider", "")}>
-              Tum Saglayicilar
+              All Providers
             </button>
             {providers.map((p) => (
               <button
@@ -190,7 +209,7 @@ export function GamesPage() {
           {category && <span className="pill pill-neutral">{categoryMeta(category).label}</span>}
           {provider && <span className="pill pill-neutral">{provider}</span>}
           {search && <span className="pill pill-neutral">"{search}"</span>}
-          {flag && <span className="pill pill-neutral">{flag === "new" ? "Yeni" : "Jackpot"}</span>}
+          {flag && <span className="pill pill-neutral">{flag === "new" ? "New" : "Jackpot"}</span>}
           <button className="btn btn-ghost btn-sm" onClick={() => setParams(new URLSearchParams())}>
             Temizle
           </button>
@@ -289,7 +308,7 @@ function InternalGamePage({ slug, game }: { slug: string; game: GameCardData }) 
 
       {!user && (
         <div className="alert alert-info">
-          Demo oynamak icin giris yapin — kayit ucretsiz ve demo bakiyeniz hazir.
+          Log in to play the demo — registration is free and your demo balance is ready.
         </div>
       )}
 
@@ -382,22 +401,22 @@ function ExternalGamePage({ slug, game }: { slug: string; game: GameCardData }) 
       <div className="live-card" style={{ cursor: "default" }}>
         <div className="live-card-art" style={{ ["--tile-color" as string]: game.themeColor ?? "#7f1d1d" }}>
           <span className="live-badge">
-            <span className="live-dot" /> Canli
+            <span className="live-dot" /> Live
           </span>
           <img src={game.thumbnailUrl ?? `/games/${game.slug}.svg`} alt={game.name} />
         </div>
         <div className="live-card-body">
           <div className="live-card-name" style={{ fontSize: 18 }}>{game.name}</div>
           <div className="live-card-provider">
-            {game.provider?.name ?? meta.label} {game.category ? `· ${game.category.name}` : ""}
+            {game.provider?.name ?? meta.label}{game.category ? ` · ${categoryMeta(game.category.slug).label}` : ""}
           </div>
           <div className="live-card-meta">
             <div>
-              <div className="live-card-meta-label">Min bahis</div>
+              <div className="live-card-meta-label">Min bet</div>
               <div className="live-card-meta-value">{game.minBet ? money(game.minBet) : "—"}</div>
             </div>
             <div>
-              <div className="live-card-meta-label">Max bahis</div>
+              <div className="live-card-meta-label">Max bet</div>
               <div className="live-card-meta-value">{game.maxBet ? money(game.maxBet) : "—"}</div>
             </div>
             {game.rtp && (
@@ -420,14 +439,14 @@ function ExternalGamePage({ slug, game }: { slug: string; game: GameCardData }) 
           onClick={() => launch("real")}
           disabled={launching || !user}
         >
-          Gercek Para ile Oyna
+          Play with Real Money
         </button>
         <button
           className={`btn btn-ghost btn-lg${launching && mode === "demo" ? " btn-loading" : ""}`}
           onClick={() => launch("demo")}
           disabled={launching}
         >
-          Demo Oyna
+          Play Demo
         </button>
       </div>
 

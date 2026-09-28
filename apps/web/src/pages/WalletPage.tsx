@@ -71,7 +71,7 @@ export function WalletPage() {
     try {
       const result = await post<{ status: string; reference: string; instructions?: string }>("/api/wallet/deposit", depositForm);
       setNotice(
-        result.instructions ?? `Yatirim ${result.status === "COMPLETED" ? "completed" : "has been received"} (${result.reference})`,
+        result.instructions ?? `Deposit ${result.status === "COMPLETED" ? "completed" : "has been received"} (${result.reference})`,
       );
       await refreshMe();
     } catch (err) {
@@ -90,8 +90,8 @@ export function WalletPage() {
       const result = await post<{ reference: string; status: string; requiresReview: boolean }>("/api/wallet/withdraw", withdrawForm);
       setNotice(
         result.requiresReview
-          ? `Cekim talebiniz olusturuldu ve manuel onay bekliyor (${result.reference})`
-          : `Cekim talebiniz isleme alindi (${result.reference})`,
+          ? `Your withdrawal request was created and is awaiting manual approval (${result.reference})`
+          : `Your withdrawal request has been received (${result.reference})`,
       );
       await refreshMe();
     } catch (err) {
@@ -215,7 +215,7 @@ export function WalletPage() {
               <input className="input" type="number" min="1" value={withdrawForm.amount} onChange={(e) => setWithdrawForm({ ...withdrawForm, amount: e.target.value })} required />
             </div>
             <div className="field">
-              <label>IBAN / cuzdan adresi</label>
+              <label>IBAN / wallet address</label>
               <input className="input" value={withdrawForm.iban} onChange={(e) => setWithdrawForm({ ...withdrawForm, iban: e.target.value })} placeholder="TR00 0000 0000 0000 0000 0000 00" />
             </div>
             <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={busy}>
@@ -328,7 +328,7 @@ export function PromotionsPage() {
 
       {bonuses.length === 0 ? (
         <div className="card">
-          <Empty icon="🎁" title="Su anda aktif bonus yok" hint="New promotions will appear here once available." />
+          <Empty icon="🎁" title="No active bonuses right now" hint="New promotions will appear here once available." />
         </div>
       ) : (
         <div className="grid grid-2">

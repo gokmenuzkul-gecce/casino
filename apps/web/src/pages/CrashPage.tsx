@@ -163,7 +163,7 @@ export function CrashPage() {
       (ack: { ok: boolean; betId?: string; error?: string }) => {
         if (!ack.ok) return setError(ack.error ?? "Could not place the bet");
         setMyBet({ betId: ack.betId!, amount });
-        setNotice(`Bahis yerlestirildi: ${money(amount)}`);
+        setNotice(`Bet placed: ${money(amount)}`);
       },
     );
   };
@@ -245,7 +245,7 @@ export function CrashPage() {
           <div className="card">
             <div className="card-title">Live Bets <span className="faint small">{bets.length} oyuncu</span></div>
             {bets.length === 0 ? (
-              <div className="muted small center" style={{ padding: 16 }}>Bu turda henuz bahis yok</div>
+              <div className="muted small center" style={{ padding: 16 }}>No bets in this round yet</div>
             ) : (
               <div className="crash-bet-list">
                 {bets.map((bet) => (
