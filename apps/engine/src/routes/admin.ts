@@ -15,7 +15,13 @@ import { prisma } from "@aurora/db";
 import { ledger, parseAmount } from "../services/ledger.js";
 import { audit } from "../services/audit.js";
 import { authenticate, requirePermission, requireStaff } from "../middleware/auth.js";
-import { registryHealth } from "../providers/index.js";
+import { registryHealth, createProviderRegistry } from "../providers/index.js";
+import {
+  PROVIDER_ENV_KEYS,
+  loadProviderConfig,
+  publicValues,
+  saveProviderConfig,
+} from "../services/provider-config.js";
 import { env } from "../lib/env.js";
 import { nanoid } from "nanoid";
 
@@ -1174,23 +1180,62 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       prisma.scheduledTask.findMany({ orderBy: { name: "asc" } }),
     ]);
 
+    // The panel edits credentials per kind, so expose what is already saved with
+    // secrets masked. Without this an operator sees only env-derived health and
+    // has nowhere to enter the values in the first place.
+    const saved: Record<string, { provider: string; isEnabled: boolean; values: Record<string, string> }> = {};
+    for (const kind of Object.keys(PROVIDER_ENV_KEYS)) {
+      const config = await loadProviderConfig(kind);
+      if (config) saved[kind] = { provider: config.provider, isEnabled: config.isEnabled, values: publicValues(config.values) };
+    }
+
     return {
       platformMode: env.platformMode,
       health,
       configs,
+      saved,
       scheduledTasks: scheduled,
       /** The env keys each integration needs, so the admin UI can guide setup. */
-      requiredEnvKeys: {
-        gameAggregator: ["GAME_AGGREGATOR", "GAME_AGGREGATOR_BASE_URL", "GAME_AGGREGATOR_API_KEY", "GAME_AGGREGATOR_SECRET", "GAME_AGGREGATOR_MERCHANT_ID", "GAME_AGGREGATOR_CALLBACK_SECRET", "GREG_MORN_OFFICE_URL", "GREG_MORN_CLIENT_URL", "GREG_MORN_LOGIN", "GREG_MORN_PASSWORD", "GREG_MORN_SECRET_KEY", "GREG_MORN_USER_ID", "GREG_MORN_CURRENCY", "BETSKILLA_BASE_URL", "BETSKILLA_LOGIN", "BETSKILLA_PASSWORD", "BETSKILLA_CURRENCY", "BETSKILLA_CALLBACK_SECRET"],
-        psp: ["PSP_PROVIDER", "PSP_BASE_URL", "PSP_API_KEY", "PSP_SECRET_KEY", "PSP_MERCHANT_ID", "PSP_WEBHOOK_SECRET"],
-        crypto: ["CRYPTO_PROVIDER", "CRYPTO_BASE_URL", "CRYPTO_API_KEY", "CRYPTO_WEBHOOK_SECRET"],
-        kyc: ["KYC_PROVIDER", "KYC_BASE_URL", "KYC_API_KEY", "KYC_WEBHOOK_SECRET"],
-        risk: ["RISK_PROVIDER", "RISK_BASE_URL", "RISK_API_KEY"],
-        sms: ["SMS_PROVIDER", "SMS_ENDPOINT", "SMS_API_KEY", "SMS_SENDER"],
-      },
+      requiredEnvKeys: PROVIDER_ENV_KEYS,
       supportedAggregators: ["generic", "gregmorn", "betskilla", "softswiss", "slotegrator", "1x2", "hub88", "pragmatic"],
       supportedPsps: ["generic", "payfix", "papara", "stripe", "payhound"],
     };
+  });
+
+  /**
+   * Save provider credentials from the panel and bring them live.
+   *
+   * The adapters read their config from the environment, so a save writes the
+   * values through and rebuilds the registry in place: the new provider answers
+   * the next request without an .env edit or a restart. The registry object is
+   * mutated rather than replaced so the decorators and PaymentService keep the
+   * same reference.
+   */
+  app.put("/admin/integrations/:kind", { preHandler: [authenticate, requirePermission(PERMISSIONS.SETTINGS_PROVIDERS)] }, async (request) => {
+    const { kind } = request.params as { kind: string };
+    const body = (request.body ?? {}) as { provider?: string; values?: Record<string, string> };
+
+    const previousKind = app.providers.gameAggregator.name;
+    const result = await saveProviderConfig({
+      kind,
+      provider: String(body.provider ?? ""),
+      values: body.values ?? {},
+      actorId: request.user!.id,
+    });
+
+    Object.assign(app.providers, createProviderRegistry());
+
+    await audit.log({
+      actorId: request.user!.id,
+      action: AuditAction.SETTINGS_UPDATED,
+      entityType: "ProviderConfig",
+      entityId: kind,
+      // Only key names and the provider profile are recorded: the values are
+      // credentials and must not reach the audit trail.
+      after: { provider: body.provider, changed: result.changed, previousProvider: previousKind },
+    });
+
+    return { saved: true, changed: result.changed, health: await registryHealth(app.providers) };
   });
 
   // ── audit ─────────────────────────────────────────────────────────────

@@ -11,8 +11,8 @@ The vendor specification is checked in at
 
 | Gregmorn endpoint | Our side |
 | --- | --- |
-| `POST /auth/login` | `GregmornAggregator.authenticate()` — form-encoded, cached until expiry, refreshed once on 401 |
-| `GET /users/{user_id}/getUserGames/{currencyISO}` | `GregmornAggregator.listGames()` → `/api/admin/games/sync` |
+| `POST /auth/login` | `GregmornAggregator.authenticate()` â€” form-encoded, cached until expiry, refreshed once on 401 |
+| `GET /users/{user_id}/getUserGames/{currencyISO}` | `GregmornAggregator.listGames()` â†’ `/api/admin/games/sync` |
 | `POST /games/openGame` | `GregmornAggregator.launchSession()` via `POST /api/games/:slug/launch` |
 | `POST /games/freespinsInfo` | `GregmornAggregator.freespinsInfo()` via `POST /api/admin/games/freespins-info` |
 | Wallet callbacks (`getBalance`, `writeBet`, `rollback`) | `POST /webhooks/aggregator/gregmorn/wallet` |
@@ -23,7 +23,20 @@ enabling both would double-count every bet. Seamless alone is implemented.
 
 ## Configuration
 
-Set these in `.env`, then restart the engine:
+There are two ways in, and the admin panel is the one an operator uses.
+
+### From the admin panel (recommended)
+
+**Admin → Entegrasyon → Kimlik Gir.** Fill in the fields and hit **Kaydet**.
+Values are encrypted with AES-256-GCM at rest in `provider_configs` and applied
+to the running process immediately, so the provider goes live without an `.env`
+edit or a restart. Secrets are stored masked and are never returned to the
+browser. This is the supported path for stage and production alike.
+
+### From `.env`
+
+Editing `.env` still works and is the fallback for a fresh install where no
+admin row exists yet. Restart the engine after editing:
 
 ```bash
 GAME_AGGREGATOR=gregmorn
@@ -35,6 +48,12 @@ GREG_MORN_SECRET_KEY=...      # signs outbound calls, verifies callbacks
 GREG_MORN_USER_ID=...         # API user id issued by Gregmorn
 GREG_MORN_CURRENCY=TRY
 ```
+
+Use the host names from this document. They are the ones the vendor's own spec
+publishes; an alias host that sits behind a JavaScript challenge will refuse a
+server-to-server call with HTTP 403 regardless of how correct the credentials
+are. A value saved in the panel wins over `.env`, so the two can disagree during
+a migration without the wrong one being picked up.
 
 Stage and production are separate deployments with separate logins, secret keys
 and IP allowlists. Start on stage and only move to production after acceptance.

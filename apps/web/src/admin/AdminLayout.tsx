@@ -159,7 +159,7 @@ export function AdminLayout() {
             <Route path="reports" element={<AdminReports />} />
             <Route path="cms" element={<AdminCms onToast={setToast} />} />
             <Route path="audit" element={<AdminAudit />} />
-            <Route path="integrations" element={<AdminIntegrations />} />
+            <Route path="integrations" element={<AdminIntegrations onToast={setToast} />} />
             <Route path="settings" element={<AdminSettings onToast={setToast} />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>

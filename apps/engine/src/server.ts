@@ -11,6 +11,7 @@ import { prisma } from "@aurora/db";
 import { env, assertProductionReadiness } from "./lib/env.js";
 import { createProviderRegistry, ProviderRegistry } from "./providers/index.js";
 import { PaymentService } from "./services/payments.js";
+import { applyProviderConfigs } from "./services/provider-config.js";
 import { authRoutes } from "./routes/auth.js";
 import { gameRoutes } from "./routes/games.js";
 import { walletRoutes } from "./routes/wallet.js";
@@ -90,6 +91,10 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   // ── dependency wiring ─────────────────────────────────────────────────
+  // Credentials saved from the admin panel are overlaid onto the environment
+  // before the registry is built, so a provider configured in the product is
+  // live at boot exactly like one configured in .env.
+  await applyProviderConfigs();
   const providers = createProviderRegistry();
   const payments = new PaymentService(providers);
   app.decorate("providers", providers);

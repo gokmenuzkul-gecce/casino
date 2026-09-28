@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { get } from "../lib/api";
+import { get, put } from "../lib/api";
 import { Pill, Spinner } from "../components/ui";
+import type { ToastFn } from "./AdminLayout";
 
 interface ProviderHealth {
   kind: string;
@@ -12,19 +13,53 @@ interface ProviderHealth {
   checkedAt: string;
 }
 
-export function AdminIntegrations() {
-  const [data, setData] = useState<{
-    platformMode: string;
-    health: ProviderHealth[];
-    requiredEnvKeys: Record<string, string[]>;
-    supportedAggregators: string[];
-    supportedPsps: string[];
-    scheduledTasks: { name: string; cron: string; isActive: boolean; lastRunAt?: string | null; lastStatus?: string | null; runCount: number }[];
-  } | null>(null);
+type SavedConfig = { provider: string; isEnabled: boolean; values: Record<string, string> };
 
-  useEffect(() => {
-    get<typeof data>("/api/admin/integrations").then(setData).catch(() => undefined);
-  }, []);
+interface Data {
+  platformMode: string;
+  health: ProviderHealth[];
+  saved: Record<string, SavedConfig>;
+  requiredEnvKeys: Record<string, string[]>;
+  supportedAggregators: string[];
+  supportedPsps: string[];
+  scheduledTasks: { name: string; cron: string; isActive: boolean; lastRunAt?: string | null; lastStatus?: string | null; runCount: number }[];
+}
+
+/** Values that reach the browser only as a mask; leaving them blank keeps them. */
+const SECRET_PATTERN = /SECRET|PASSWORD|API_KEY|_KEY$/;
+
+export function AdminIntegrations({ onToast }: { onToast: ToastFn }) {
+  const [data, setData] = useState<Data | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState<{ provider: string; values: Record<string, string> }>({ provider: "", values: {} });
+  const [busy, setBusy] = useState(false);
+
+  const load = () => get<Data>("/api/admin/integrations").then(setData).catch(() => undefined);
+  useEffect(() => { load(); }, []);
+
+  const startEdit = (kind: string) => {
+    const saved = data?.saved[kind];
+    setEditing(kind);
+    setForm({
+      provider: saved?.provider ?? "",
+      values: Object.fromEntries((data?.requiredEnvKeys[kind] ?? []).map((key) => [key, saved?.values[key] ?? ""])),
+    });
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    setBusy(true);
+    try {
+      await put(`/api/admin/integrations/${editing}`, form);
+      onToast({ message: "Saglayici yapilandirmasi kaydedildi", kind: "success" });
+      setEditing(null);
+      await load();
+    } catch (err) {
+      onToast({ message: err instanceof Error ? err.message : "Kaydedilemedi", kind: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (!data) return <Spinner label="Entegrasyon durumu yukleniyor" />;
 
@@ -42,32 +77,67 @@ export function AdminIntegrations() {
       <h1 className="section-title" style={{ marginTop: 0 }}>Entegrasyon Yonetimi</h1>
 
       <div className="alert alert-info mb">
-        Platform modu: <span className="bold">{data.platformMode}</span>. Gercek saglayicilar icin <span className="mono">.env</span> dosyasina
-        API bilgilerini girin; platform yeniden baslatildiginda saglayici otomatik olarak devreye girer. Kod degisikligi gerekmez.
+        Asagidaki alanlara kimlik bilgilerini girip <span className="bold">Kaydet</span>'e basin. Bilgiler sifreli olarak saklanir ve
+        kaydedildigi anda devreye girer; <span className="mono">.env</span> duzenlemek veya yeniden baslatmak gerekmez.
       </div>
 
       <div className="grid grid-2 mb">
-        {data.health.map((provider) => (
-          <div className="card" key={provider.kind}>
-            <div className="row-between mb">
-              <div className="bold">{labels[provider.kind] ?? provider.kind}</div>
-              <Pill kind={provider.configured ? "success" : "warning"}>{provider.configured ? "YAPILANDIRILDI" : "BEKLIYOR"}</Pill>
-            </div>
-            <div className="grid grid-2" style={{ gap: 8 }}>
-              <div className="small"><span className="muted">Aktif saglayici: </span><span className="mono">{provider.provider}</span></div>
-              <div className="small"><span className="muted">Mod: </span><Pill kind={provider.mode === "live" ? "danger" : "warning"}>{provider.mode}</Pill></div>
-            </div>
-            {provider.detail && <div className="tiny faint mt">{provider.detail}</div>}
+        {data.health.map((provider) => {
+          const saved = data.saved[provider.kind];
+          const isEditing = editing === provider.kind;
+          return (
+            <div className="card" key={provider.kind}>
+              <div className="row-between mb">
+                <div className="bold">{labels[provider.kind] ?? provider.kind}</div>
+                <Pill kind={provider.configured ? "success" : "warning"}>{provider.configured ? "YAPILANDIRILDI" : "BEKLIYOR"}</Pill>
+              </div>
+              <div className="grid grid-2" style={{ gap: 8 }}>
+                <div className="small"><span className="muted">Aktif saglayici: </span><span className="mono">{provider.provider}</span></div>
+                <div className="small"><span className="muted">Mod: </span><Pill kind={provider.mode === "live" ? "danger" : "warning"}>{provider.mode}</Pill></div>
+              </div>
+              {provider.detail && <div className="tiny faint mt">{provider.detail}</div>}
 
-            <div className="divider" style={{ margin: "12px 0" }} />
-            <div className="tiny faint bold mb">GEREKLI ORTAM DEGISKENLERI</div>
-            <div className="col" style={{ gap: 3 }}>
-              {(data.requiredEnvKeys[provider.kind] ?? []).map((key) => (
-                <div className="mono tiny" key={key} style={{ color: "var(--accent)" }}>{key}</div>
-              ))}
+              <div className="divider" style={{ margin: "12px 0" }} />
+
+              {!isEditing ? (
+                <div className="row-between">
+                  <div className="tiny faint">{saved ? `Kayitli profil: ${saved.provider}` : "Panelden kayitli bilgi yok"}</div>
+                  <button className="btn btn-sm" onClick={() => startEdit(provider.kind)}>Kimlik Gir</button>
+                </div>
+              ) : (
+                <div className="col" style={{ gap: 8 }}>
+                  <div className="field">
+                    <label className="label tiny">Saglayici Profili</label>
+                    <input
+                      className="input mono"
+                      placeholder="gregmorn / betskilla / generic"
+                      value={form.provider}
+                      onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
+                    />
+                  </div>
+                  {(data.requiredEnvKeys[provider.kind] ?? []).map((key) => (
+                    <div className="field" key={key}>
+                      <label className="label tiny mono">{key}</label>
+                      <input
+                        className="input mono"
+                        type={SECRET_PATTERN.test(key) ? "password" : "text"}
+                        placeholder={SECRET_PATTERN.test(key) ? "kaydetmek icin girin" : ""}
+                        value={form.values[key] ?? ""}
+                        onChange={(e) => setForm((f) => ({ ...f, values: { ...f.values, [key]: e.target.value } }))}
+                      />
+                    </div>
+                  ))}
+                  <div className="row" style={{ gap: 8 }}>
+                    <button className="btn btn-sm btn-primary" disabled={busy} onClick={save}>
+                      {busy ? "Kaydediliyor..." : "Kaydet"}
+                    </button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => setEditing(null)}>Vazgec</button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="card mb">

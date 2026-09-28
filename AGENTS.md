@@ -139,6 +139,18 @@ precisely so this is visible instead of assumed.
 
 ## Gotchas
 
+- Provider credentials can now be entered at **Admin → Entegrasyon → Kimlik Gir**
+  (`PUT /api/admin/integrations/:kind`). They are AES-256-GCM encrypted into
+  `provider_configs`, overlaid onto `process.env` at boot and again on save, and a
+  saved value wins over `.env`. Secrets are masked in the API response and never
+  written to the audit trail — only the changed key names are. See
+  `apps/engine/src/services/provider-config.ts`.
+- Gregmorn/Gamble Hub: use the hosts from `docs/providers/gregmorn-openapi.json`
+  (`*.gregmorn.org`), not the `*.gamble-hub.net` aliases. The aliases sit behind a
+  Cloudflare JavaScript challenge and answer a server-to-server call with HTTP 403
+  ("Just a moment...") no matter how correct the credentials are. A working host
+  answers `401 {"error":"authorization failed"}` to wrong credentials, which is the
+  signal that the host — not the credentials — is fine.
 - BetSkilla's operator host does **not** answer 401/403 when its session dies. It answers
   `400 {"error":true,"code":266,"message":"game is not available"}`. The adapter caches one
   cookie for its whole lifetime, so before `sessionExpired()` treated 400 as an expiry, a
