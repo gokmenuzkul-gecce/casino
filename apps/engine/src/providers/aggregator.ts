@@ -37,6 +37,13 @@ export interface LaunchSessionRequest {
   sessionToken: string;
   ip?: string;
   userAgent?: string;
+  /**
+   * Human-readable player login some providers require alongside the user id.
+   * Falls back to `playerId` when the provider does not need it.
+   */
+  playerLogin?: string;
+  /** Per-session callback URL override, when the provider supports it. */
+  callbackUrlOverride?: string;
 }
 
 export interface LaunchSessionResult {
@@ -56,6 +63,30 @@ export interface SeamlessWalletRequest {
   sessionToken: string;
 }
 
+/** Normalised wallet command, independent of a provider's own envelope. */
+export type WalletCommand = "BALANCE" | "WRITE_BET" | "ROLLBACK";
+
+/**
+ * A provider wallet callback reduced to the fields the ledger needs. Providers
+ * that send bet and win in one message keep both; the route applies the net.
+ * Amounts stay as the provider sent them (major units, number or string) and
+ * are converted with the currency's precision further down.
+ */
+export interface ParsedWalletCallback {
+  command: WalletCommand;
+  /** Provider-side player identity, echoed back in every response. */
+  playerLogin: string;
+  /** Idempotency key. Empty for a pure balance read. */
+  transactionId: string;
+  bet?: string;
+  win?: string;
+  sessionId?: string;
+  gameId?: string;
+  roundId?: string;
+  roundFinished?: boolean;
+  info?: string;
+}
+
 export interface GameAggregatorAdapter extends ProviderAdapter {
   readonly kind: "gameAggregator";
   listGames(params: { page?: number; pageSize?: number; category?: string }): Promise<AggregatorGame[]>;
@@ -64,6 +95,22 @@ export interface GameAggregatorAdapter extends ProviderAdapter {
   verifyCallback(rawBody: string, headers: Record<string, string | undefined>): boolean;
   /** Demo implementation returns an internal route instead of a provider URL. */
   readonly isInternal: boolean;
+  /**
+   * Reduce a provider's wallet callback to the normalised shape, or null when
+   * the provider uses a different wallet model (transfer instead of seamless).
+   */
+  parseWalletCallback?(payload: Record<string, unknown>): ParsedWalletCallback | null;
+  /** Build this provider's success envelope for a wallet callback reply. */
+  walletResponse?(input: { login: string; balance: string; currency: string }): Record<string, unknown>;
+  /** Build this provider's failure envelope for a wallet callback reply. */
+  walletError?(input: { login: string; currency: string; message: string }): Record<string, unknown>;
+  /** Free-spin limits for a game. Present only on providers that support them. */
+  freespinsInfo?(input: { gameId: string; currency?: string }): Promise<{
+    code: number;
+    availableBets: number[];
+    maxCount: number;
+    message: string;
+  }>;
 }
 
 /** Used when no aggregator is configured: internal games only, real content disabled. */

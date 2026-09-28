@@ -5,6 +5,8 @@ import {
   GameAggregatorAdapter,
   RestAggregator,
 } from "./aggregator.js";
+import { GregmornAggregator } from "./gregmorn.js";
+import { BetSkillaAggregator } from "./betskilla.js";
 import { DemoPsp, PspAdapter, RestPsp } from "./psp.js";
 import { DemoKyc, KycAdapter, RestKyc } from "./kyc.js";
 import {
@@ -58,6 +60,34 @@ const PSP_PROFILES: Record<
 
 export function buildAggregator(): GameAggregatorAdapter {
   const { provider, baseUrl, apiKey, secret, merchantId, callbackSecret } = env.gameAggregator;
+
+  // Gregmorn speaks its own protocol (two hosts, token auth, command callbacks),
+  // so it bypasses the generic profile table entirely.
+  if (provider === "gregmorn") {
+    const gregmorn = new GregmornAggregator({
+      officeBaseUrl: env.gregmorn.officeBaseUrl,
+      clientBaseUrl: env.gregmorn.clientBaseUrl,
+      login: env.gregmorn.login,
+      password: env.gregmorn.password,
+      secretKey: env.gregmorn.secretKey,
+      userId: env.gregmorn.userId,
+      currency: env.gregmorn.currency,
+    });
+    return gregmorn.isConfigured ? gregmorn : new DisabledAggregator();
+  }
+
+  // BetSkilla brands (Xenzora, Kingsbet) front everything behind the brand host
+  // with a cookie session, so they get their own adapter too.
+  if (provider === "betskilla" || provider === "xenzora" || provider === "kingsbet") {
+    const betskilla = new BetSkillaAggregator({
+      baseUrl: env.betskilla.baseUrl,
+      login: env.betskilla.login,
+      password: env.betskilla.password,
+      currency: env.betskilla.currency,
+    });
+    return betskilla.isConfigured ? betskilla : new DisabledAggregator();
+  }
+
   if (!provider || provider === "none" || !baseUrl || !apiKey) return new DisabledAggregator();
 
   const profile = AGGREGATOR_PROFILES[provider] ?? AGGREGATOR_PROFILES.generic!;

@@ -9,7 +9,9 @@
     "start": "node --env-file=../../.env dist/server.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "smoke:gregmorn": "tsx --env-file=../../.env scripts/gregmorn-smoke.ts",
+    "sync:games": "tsx --env-file=../../.env scripts/sync-betskilla.ts"
   },
   "dependencies": {
     "@aurora/db": "*",

@@ -1,7 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { Errors } from "@aurora/shared";
+import { AppError, Errors } from "@aurora/shared";
 import { prisma } from "@aurora/db";
+import { env } from "../lib/env.js";
 import { bonusService } from "../services/bonuses.js";
+import { AggregatorWalletService } from "../services/aggregator-wallet.js";
 
 /**
  * Inbound webhooks.
@@ -241,6 +243,92 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
+  /**
+   * Seamless-wallet callbacks in the Gregmorn command envelope.
+   *
+   * The provider owns the round and asks us to move money. The reply must be
+   * the provider's own shape, and a business rejection must arrive as HTTP 400
+   * with `status: "fail"`: the provider reads that as "do not start the spin".
+   * Anything we cannot settle is therefore an explicit 400, never a 500.
+   */
+  app.post("/webhooks/aggregator/gregmorn/wallet", async (request, reply) => {
+    const rawBody = typeof request.body === "string" ? request.body : JSON.stringify(request.body ?? {});
+    const payload = (typeof request.body === "object" && request.body !== null ? request.body : {}) as Record<string, unknown>;
+    const headers = request.headers as Record<string, string | undefined>;
+
+    const aggregator = app.providers.gameAggregator;
+    const verified = aggregator.verifyCallback(rawBody, headers);
+
+    const callback = aggregator.parseWalletCallback?.(payload) ?? null;
+    const login = callback?.playerLogin ?? String(payload.login ?? "");
+    const currency = String(payload.currency ?? env.currency);
+
+    const event = await prisma.webhookEvent.create({
+      data: {
+        provider: aggregator.name,
+        eventType: String(payload.cmd ?? "wallet"),
+        reference: callback?.transactionId ?? "",
+        payload: payload as never,
+        verified,
+      },
+    });
+
+    const finish = async (processed: boolean, error?: string) => {
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: { processed, processedAt: new Date(), error: error ?? null },
+      });
+    };
+
+    // Signature first: an unauthenticated caller must not reach the ledger.
+    if (!verified) {
+      await finish(true, "Imza dogrulanamadi");
+      return reply
+        .code(400)
+        .send(aggregator.walletError?.({ login, currency, message: "invalid signature" }) ?? { status: "fail" });
+    }
+
+    if (!callback) {
+      await finish(true, "Desteklenmeyen komut");
+      return reply
+        .code(400)
+        .send(aggregator.walletError?.({ login, currency, message: "unknown command" }) ?? { status: "fail" });
+    }
+
+    const user = await resolvePlayer(login);
+    if (!user) {
+      await finish(true, "Oyuncu bulunamadi");
+      return reply
+        .code(400)
+        .send(aggregator.walletError?.({ login, currency, message: "player not found" }) ?? { status: "fail" });
+    }
+
+    try {
+      const settled = await new AggregatorWalletService(aggregator.name).settle(callback, {
+        playerId: user.id,
+        // The wallet the provider plays against follows the player's own currency
+        // so a session in the wrong currency cannot silently move real money.
+        currency: user.currency || currency,
+      });
+
+      await finish(true);
+      return reply.send(
+        aggregator.walletResponse?.({ login, balance: settled.balance, currency: settled.currency }) ?? settled,
+      );
+    } catch (error) {
+      const message = error instanceof AppError ? error.message : "settlement failed";
+      const insufficient = error instanceof AppError && error.code === "INSUFFICIENT_FUNDS";
+      await finish(true, message);
+      return reply
+        .code(400)
+        .send(
+          aggregator.walletError?.({ login, currency, message: insufficient ? "insufficient funds" : message }) ?? {
+            status: "fail",
+          },
+        );
+    }
+  });
+
   /** Affiliate postback: records a click and attributes the visitor. */
   app.get("/webhooks/affiliate/:code", async (request, reply) => {
     const { code } = request.params as { code: string };
@@ -291,5 +379,20 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
       await bonusService.expireBonus(bonus.id).catch((error) => console.error("[bonus] expire hatasi", error));
     }
     return { expired: expired.length };
+  });
+}
+
+/**
+ * Map the provider's `player_login` back to a local account.
+ *
+ * We register the player's username as `player_login` at launch time, so that
+ * is the identity to resolve. Falling back to the id keeps sessions launched
+ * before a username existed working.
+ */
+async function resolvePlayer(login: string): Promise<{ id: string; currency: string } | null> {
+  if (!login) return null;
+  return prisma.user.findFirst({
+    where: { OR: [{ username: login }, { id: login }] },
+    select: { id: true, currency: true },
   });
 }

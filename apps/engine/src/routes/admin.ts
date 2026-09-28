@@ -804,6 +804,27 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { created, updated, total: games.length, provider: aggregator.name };
   });
 
+  /**
+   * Free-spin eligibility for one game. Gregmorn exposes this separately so an
+   * operator can check limits before committing a free-spin campaign.
+   */
+  app.post(
+    "/admin/games/freespins-info",
+    { preHandler: [authenticate, requirePermission(PERMISSIONS.GAME_VIEW)] },
+    async (request) => {
+      const aggregator = app.providers.gameAggregator;
+      if (!aggregator.isConfigured) throw Errors.providerDisabled("Oyun agregatoru");
+      if (typeof aggregator.freespinsInfo !== "function") {
+        throw Errors.validation(`${aggregator.name} saglayicisi free spin desteklemiyor`);
+      }
+
+      const body = (request.body ?? {}) as { gameId?: string; currency?: string };
+      if (!body.gameId) throw Errors.validation("gameId zorunlu");
+
+      return aggregator.freespinsInfo({ gameId: body.gameId, currency: body.currency });
+    },
+  );
+
   // ── bonuses ───────────────────────────────────────────────────────────
 
   app.get("/admin/bonuses", { preHandler: [authenticate, requirePermission(PERMISSIONS.BONUS_VIEW)] }, async () => {
@@ -1160,14 +1181,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       scheduledTasks: scheduled,
       /** The env keys each integration needs, so the admin UI can guide setup. */
       requiredEnvKeys: {
-        gameAggregator: ["GAME_AGGREGATOR", "GAME_AGGREGATOR_BASE_URL", "GAME_AGGREGATOR_API_KEY", "GAME_AGGREGATOR_SECRET", "GAME_AGGREGATOR_MERCHANT_ID", "GAME_AGGREGATOR_CALLBACK_SECRET"],
+        gameAggregator: ["GAME_AGGREGATOR", "GAME_AGGREGATOR_BASE_URL", "GAME_AGGREGATOR_API_KEY", "GAME_AGGREGATOR_SECRET", "GAME_AGGREGATOR_MERCHANT_ID", "GAME_AGGREGATOR_CALLBACK_SECRET", "GREG_MORN_OFFICE_URL", "GREG_MORN_CLIENT_URL", "GREG_MORN_LOGIN", "GREG_MORN_PASSWORD", "GREG_MORN_SECRET_KEY", "GREG_MORN_USER_ID", "GREG_MORN_CURRENCY"],
         psp: ["PSP_PROVIDER", "PSP_BASE_URL", "PSP_API_KEY", "PSP_SECRET_KEY", "PSP_MERCHANT_ID", "PSP_WEBHOOK_SECRET"],
         crypto: ["CRYPTO_PROVIDER", "CRYPTO_BASE_URL", "CRYPTO_API_KEY", "CRYPTO_WEBHOOK_SECRET"],
         kyc: ["KYC_PROVIDER", "KYC_BASE_URL", "KYC_API_KEY", "KYC_WEBHOOK_SECRET"],
         risk: ["RISK_PROVIDER", "RISK_BASE_URL", "RISK_API_KEY"],
         sms: ["SMS_PROVIDER", "SMS_ENDPOINT", "SMS_API_KEY", "SMS_SENDER"],
       },
-      supportedAggregators: ["generic", "softswiss", "slotegrator", "1x2", "hub88", "pragmatic"],
+      supportedAggregators: ["generic", "gregmorn", "softswiss", "slotegrator", "1x2", "hub88", "pragmatic"],
       supportedPsps: ["generic", "payfix", "papara", "stripe", "payhound"],
     };
   });

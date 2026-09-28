@@ -72,6 +72,32 @@ export const env = {
     callbackSecret: str("GAME_AGGREGATOR_CALLBACK_SECRET"),
   },
 
+  /**
+   * Gregmorn Hub. Stage and prod are separate deployments with separate
+   * credentials and IP allowlists, so every value is an env var.
+   */
+  gregmorn: {
+    officeBaseUrl: str("GREG_MORN_OFFICE_URL"),
+    clientBaseUrl: str("GREG_MORN_CLIENT_URL"),
+    login: str("GREG_MORN_LOGIN"),
+    password: str("GREG_MORN_PASSWORD"),
+    secretKey: str("GREG_MORN_SECRET_KEY"),
+    userId: str("GREG_MORN_USER_ID"),
+    currency: str("GREG_MORN_CURRENCY", str("CURRENCY", "TRY")),
+  },
+
+  /**
+   * BetSkilla white-label hub (Xenzora/Kingsbet). Games, session launch and the
+   * player session all live behind the operator brand's own `/api` gateway, so
+   * the brand host is the only required value; the rest are optional overrides.
+   */
+  betskilla: {
+    baseUrl: str("BETSKILLA_BASE_URL"),
+    login: str("BETSKILLA_LOGIN"),
+    password: str("BETSKILLA_PASSWORD"),
+    currency: str("BETSKILLA_CURRENCY", "INR"),
+  },
+
   psp: {
     provider: str("PSP_PROVIDER", "none"),
     baseUrl: str("PSP_BASE_URL"),

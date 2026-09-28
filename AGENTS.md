@@ -36,11 +36,80 @@ python3 apps/web/scripts/generate_art.py   # regenerates public/ SVGs
 - Bet params are validated by `packages/game-core`; e.g. limbo takes `targetMultiplier`
   (not `target`). Wrong param names surface as `INTERNAL` errors.
 
+## Cold start
+
+A fresh sandbox has no Docker daemon and no services. To bring the platform up:
+
+```bash
+sudo dockerd > /tmp/docker.log 2>&1 &      # daemon does not auto-start
+sleep 5
+sudo docker compose -f infra/docker-compose.yml up -d
+
+npx prisma generate --schema packages/db/prisma/schema.prisma
+cd packages/db && npx prisma db push --skip-generate   # no migrations/ dir exists
+cd ../.. && npm run db:seed                            # 57 tables, idempotent
+
+nohup npm run dev:engine > /tmp/engine.log 2>&1 &      # port 4000
+cd apps/web && nohup npx vite --port 12000 --host 0.0.0.0 > /tmp/web.log 2>&1 &
+```
+
+Notes:
+
+- `npm run db:migrate` runs `prisma migrate dev`, which prompts interactively and hangs.
+  There is no `prisma/migrations/` directory, so use `db push`.
+- The external tunnel maps to port **12000**, but `vite.config.ts` declares 3000. Vite must
+  be started with `--port 12000` or the work host returns 502.
+- `npm run dev:engine` prints an `EBADF` error from `tsx watch` losing stdin under `nohup`;
+  the child server still starts and `/health` returns 200. Harmless.
+
 ## Access
 
 - Site: `/` · Admin: `/admin` · Mailpit: port 8025
 - Demo admin: `admin@aurora.local` / `Admin!2345`
 - Engine health: `GET http://localhost:4000/health` → `checks.database` / `checks.redis`
+
+## Tests
+
+- `npm test` runs across workspaces. `apps/engine` has DB-backed tests (seamless wallet
+  settlement and the Gregmorn callback route); they need the `infra/docker-compose.yml`
+  services and skip with a printed reason when Postgres is unreachable.
+- `apps/engine/vitest.config.ts` loads the repo `.env` so tests use the same database,
+  Redis and secrets as the server, and runs files serially because they share rows.
+- Tests assert against real ledger and wallet state; nothing there is mocked.
+
+## Gregmorn Hub smoke test
+
+- `npm run smoke:gregmorn` (`apps/engine/scripts/gregmorn-smoke.ts`) walks login →
+  catalogue → `openGame` (demo) → wallet callbacks and prints a PASS/FAIL verdict per
+  step. It is an operator tool, not part of `npm test`, because it needs real stage
+  credentials and network access.
+- All six `GREG_MORN_*` values must be set; the registry hands back a
+  `DisabledAggregator` unless every one of them, including `userId`, is present.
+- Use `demo: "1"` (`openGame`) to verify a launch before an inbound-public callback
+  URL exists — demo sessions never issue wallet callbacks.
+- The stage base URLs in `.env.example` are live and reachable; the login/password
+  examples printed in the vendor spec are placeholders and answer HTTP 401.
+- `PLATFORM_MODE` decides whether an aggregator reports `live` or `demo`; it is not a
+  credential, so a configured provider still runs in demo mode until it is set to `live`.
+
+### Getting aggregator games onto the site
+
+The provider catalogue does not appear in `/games` on its own — it has to be imported
+once and re-imported after catalogue changes:
+
+1. Set the six `GREG_MORN_*` values and `GAME_AGGREGATOR=gregmorn`, then restart the
+   engine (provider config is read at boot).
+2. Admin → Games → **"Sağlayıcıdan İçe Aktar"** (`POST /api/admin/games/sync`) upserts
+   every enabled remote game into `Game` + `GameProviderModel`. Re-running is safe:
+   games already imported by `providerGameId` are updated, not duplicated.
+3. `/games` then lists them with `type=external`; launching works through
+   `POST /api/games/:slug/launch` with `{ mode: "demo" | "real" }`.
+
+Verifying this end to end without live credentials is possible by pointing
+`GREG_MORN_OFFICE_URL` / `GREG_MORN_CLIENT_URL` at a local stub that answers
+`POST /auth/login`, `GET /users/:id/getUserGames/:currency`, and
+`POST /games/openGame`. That exercises the real login, import, listing and launch
+code paths; only the vendor's network is simulated.
 
 ## Gotchas
 

@@ -4,6 +4,7 @@ import { prisma } from "@aurora/db";
 import { bets } from "../services/bets.js";
 import { bonusService } from "../services/bonuses.js";
 import { authenticate, optionalAuth } from "../middleware/auth.js";
+import { env } from "../lib/env.js";
 
 export async function gameRoutes(app: FastifyInstance): Promise<void> {
   /** Lobby catalogue: categories, providers, featured and popular games. */
@@ -324,16 +325,23 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
     const registry = app.providers;
     const sessionToken = `${request.user!.id}:${Date.now()}`;
+    const returnUrl = `${env.appUrl}/play/${game.slug}`;
     const result = await registry.gameAggregator.launchSession({
       externalGameId: game.providerGameId ?? game.slug,
       playerId: request.user!.id,
+      // Providers address the player by login, so register the username and keep
+      // the id as the wallet key. The callback route resolves either.
+      playerLogin: request.user!.username,
       currency: request.user!.currency,
       locale: "tr",
       mode: body.mode === "demo" ? "demo" : "real",
-      returnUrl: `${process.env.APP_URL ?? "http://localhost:3000"}/play/${game.slug}`,
+      returnUrl,
       sessionToken,
       ip: request.ip,
       userAgent: request.headers["user-agent"],
+      // Explicit per-session callback URL, so the provider settles against this
+      // deployment rather than whatever default sits in its admin panel.
+      callbackUrlOverride: `${env.apiPublicUrl}/webhooks/aggregator/gregmorn/wallet`,
     });
 
     return { internal: false, ...result };

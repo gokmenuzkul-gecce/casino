@@ -5,6 +5,11 @@ export interface HttpRequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   query?: Record<string, string | number | undefined>;
+  /**
+   * Object bodies are JSON-encoded. A string body is sent verbatim, which is
+   * required when the provider signs the exact bytes (HMAC over the raw body)
+   * or expects form encoding.
+   */
   body?: unknown;
   headers?: Record<string, string>;
   timeoutMs?: number;
@@ -39,12 +44,19 @@ export class HttpClient {
         const response = await fetch(this.buildUrl(options.path, options.query), {
           method,
           headers: {
-            "content-type": "application/json",
+            ...(typeof options.body === "string"
+              ? { "content-type": "application/x-www-form-urlencoded" }
+              : { "content-type": "application/json" }),
             accept: "application/json",
             ...this.defaultHeaders,
             ...options.headers,
           },
-          body: options.body === undefined ? undefined : JSON.stringify(options.body),
+          body:
+            options.body === undefined
+              ? undefined
+              : typeof options.body === "string"
+                ? options.body
+                : JSON.stringify(options.body),
           signal: controller.signal,
         });
 
