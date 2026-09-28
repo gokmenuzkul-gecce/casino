@@ -1,16 +1,19 @@
 /**
- * Imports the loginxgamesapi catalogue into the game tables.
+ * Imports the loginxgamesapi (GitSlotPark) catalogue into the game tables.
  *
  * Shared by the `sync:loginx` script and the admin panel button so both behave
- * identically. Every row is written INACTIVE on purpose: the vendor has not
- * exposed a launch endpoint, so an active row would appear in the lobby and fail
- * on click. Keeping them inactive lets an operator review the content now, and a
- * later run flips them on without a code change.
+ * identically.
+ *
+ * Rows are written INACTIVE on purpose. Launch and the wallet callbacks are
+ * implemented, but a game still must not appear in the lobby until the operator
+ * has confirmed the vendor credentials and taken the platform live — an active
+ * row on a half-configured platform fails the moment a player clicks it.
+ * Activating from the admin panel is the deliberate go-live step.
  *
  * The import is idempotent — keyed on the deterministic slug — so re-running
  * refreshes metadata and never touches player data, favourites or bets.
  *
- * See docs/providers/loginx-games-api.md for what the API does and does not do.
+ * See docs/providers/loginx-games-api.md for the contract.
  */
 import type { PrismaClient } from "@prisma/client";
 import { LoginxGamesAggregator, loginxVendorsFromEnv } from "../providers/loginx.js";
@@ -66,14 +69,15 @@ export async function importLoginxCatalog(
       providerId: provider.id,
       providerGameId: game.externalId,
       embedType: "EXTERNAL" as const,
-      config: { source: "loginx" },
+      // The launch call needs to know which vendor host to authenticate against.
+      config: { source: "loginx", launchRouter: game.launchRouter },
       rtp: 96,
       volatility: "MEDIUM" as const,
       minBet: game.minBet !== undefined ? BigInt(Math.round(Number(game.minBet) * 100)) : 1_00n,
       maxBet: 10_000_000_00n,
       isActive: false,
       demoEnabled: false,
-      realEnabled: false,
+      realEnabled: true,
       tags: game.tags ?? [],
       supportedCurrencies: game.currencies ?? [currency],
       releasedAt: game.releasedAt ? new Date(game.releasedAt) : undefined,

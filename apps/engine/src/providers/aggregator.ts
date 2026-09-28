@@ -72,7 +72,10 @@ export interface SeamlessWalletRequest {
 }
 
 /** Normalised wallet command, independent of a provider's own envelope. */
-export type WalletCommand = "BALANCE" | "WRITE_BET" | "ROLLBACK";
+export type WalletCommand = "BALANCE" | "WRITE_BET" | "ROLLBACK" | "WITHDRAW" | "DEPOSIT";
+
+/** A failure the wallet route detects before it reaches settlement. */
+export type WalletFailureReason = "invalid_signature" | "unknown_command" | "player_not_found";
 
 /**
  * A provider wallet callback reduced to the fields the ledger needs. Providers
@@ -88,6 +91,8 @@ export interface ParsedWalletCallback {
   transactionId: string;
   bet?: string;
   win?: string;
+  /** For DEPOSIT: the Withdraw this win settles. Rollback addresses it by this id. */
+  refTransactionId?: string;
   sessionId?: string;
   gameId?: string;
   roundId?: string;
@@ -109,9 +114,30 @@ export interface GameAggregatorAdapter extends ProviderAdapter {
    */
   parseWalletCallback?(payload: Record<string, unknown>): ParsedWalletCallback | null;
   /** Build this provider's success envelope for a wallet callback reply. */
-  walletResponse?(input: { login: string; balance: string; currency: string }): Record<string, unknown>;
+  walletResponse?(input: { login: string; balance: string; currency: string; transactionId?: string }): Record<string, unknown>;
   /** Build this provider's failure envelope for a wallet callback reply. */
-  walletError?(input: { login: string; currency: string; message: string }): Record<string, unknown>;
+  walletError?(input: { login: string; currency: string; message: string; code?: number }): Record<string, unknown>;
+  /**
+   * HTTP status a business rejection is sent with. Gregmorn reads a non-200 as
+   * "do not start the spin", so it needs 400. The GitSlotPark family documents
+   * 200 as the only expected status and treats a non-200 as a failed
+   * transaction to be rolled back, so it expects 200 with an error code in the
+   * body instead. Defaults to 400 when absent.
+   */
+  readonly walletErrorStatus?: number;
+  /**
+   * Provider result code for a failure the route detects before settlement
+   * (a bad sign, an unknown command, a missing player). Providers with a result
+   * code table map these to their own numbers; providers without one return
+   * undefined and only the message is sent.
+   */
+  walletFailureCode?(reason: WalletFailureReason): number;
+  /**
+   * Provider result code for a settlement failure. `command` is the operation
+   * being answered, because the documented code set differs per operation — a
+   * rollback reference that is missing is not the same code as a missing player.
+   */
+  errorCodeFor?(error: unknown, command?: WalletCommand): number;
   /** Free-spin limits for a game. Present only on providers that support them. */
   freespinsInfo?(input: { gameId: string; currency?: string }): Promise<{
     code: number;

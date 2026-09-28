@@ -9,6 +9,7 @@ import { GregmornAggregator } from "./gregmorn.js";
 import { BetSkillaAggregator } from "./betskilla.js";
 import { LoginxGamesAggregator, loginxVendorsFromEnv } from "./loginx.js";
 import { DemoPsp, PspAdapter, RestPsp } from "./psp.js";
+import { CryptomusCrypto } from "./cryptomus.js";
 import { DemoKyc, KycAdapter, RestKyc } from "./kyc.js";
 import {
   ConsoleSms,
@@ -90,9 +91,9 @@ export function buildAggregator(): GameAggregatorAdapter {
     return betskilla.isConfigured ? betskilla : new DisabledAggregator();
   }
 
-  // loginxgamesapi fronts four independent vendors behind four hosts. It can
-  // read catalogues only — no launch endpoint exists yet — so it is built for
-  // content prep, never for real play.
+  // loginxgamesapi fronts four vendors (Pragmatic Play, PG Soft, Amatic,
+  // Amusnet) behind one GitSlotPark Seamless Wallet API v2 contract: catalogue,
+  // userAuth launch and the five wallet callbacks.
   if (provider === "loginx") {
     const loginx = new LoginxGamesAggregator({
       vendors: loginxVendorsFromEnv((key) => process.env[key] ?? ""),
@@ -146,9 +147,17 @@ export function buildRisk(): RiskAdapter {
 }
 
 export function buildCrypto(): CryptoAdapter {
-  const { provider, apiKey, webhookSecret } = env.crypto;
+  const { provider, apiKey, webhookSecret, merchantId, payoutApiKey } = env.crypto;
   const baseUrl = process.env.CRYPTO_BASE_URL ?? "";
-  if (!provider || provider === "none" || !apiKey || !baseUrl) return new DisabledCrypto();
+  if (!provider || provider === "none") return new DisabledCrypto();
+
+  // Cryptomus has its own protocol: body signatures, payload-borne webhook
+  // signature and a separate payout key. It never fits the generic adapter.
+  if (provider === "cryptomus") {
+    return new CryptomusCrypto({ baseUrl: baseUrl || "https://api.cryptomus.com", apiKey, merchantId, payoutApiKey });
+  }
+
+  if (!apiKey || !baseUrl) return new DisabledCrypto();
   return new RestCrypto(provider, { baseUrl, apiKey, webhookSecret });
 }
 

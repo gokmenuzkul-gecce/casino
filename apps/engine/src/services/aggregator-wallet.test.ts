@@ -214,4 +214,120 @@ describe.skipIf(!hasDatabase)("aggregator seamless wallet", () => {
       /Desteklenmeyen para birimi/,
     );
   });
+
+  /**
+   * The GitSlotPark family splits the round: a wager arrives as `Withdraw` and
+   * the payout later as one or more `Deposit`s. These cases exercise that
+   * sequence end to end, because it is the shape the new providers actually use.
+   */
+  describe("split round (withdraw then deposit)", () => {
+    it("debits a withdraw and credits a matching deposit", async () => {
+      const start = await balance();
+      const withdrawTxn = `wd-${randomUUID()}`;
+
+      const debited = await service.settle(
+        { command: "WITHDRAW", playerLogin: username, transactionId: withdrawTxn, bet: "20.00", gameId: "2001", roundId: "r1" },
+        { playerId: userId, currency: "TRY" },
+      );
+      expect(debited.balance).toBe("80.00");
+      expect(await balance()).toBe(start - 2_000n);
+
+      const credited = await service.settle(
+        {
+          command: "DEPOSIT",
+          playerLogin: username,
+          transactionId: `dp-${randomUUID()}`,
+          win: "45.50",
+          refTransactionId: withdrawTxn,
+          gameId: "2001",
+        },
+        { playerId: userId, currency: "TRY" },
+      );
+      expect(credited.balance).toBe("125.50");
+      expect(await balance()).toBe(start - 2_000n + 4_550n);
+    });
+
+    it("applies SEVERAL deposits that share one refTransactionID", async () => {
+      // PG Soft and Amatic pay a free-spin round out in pieces: each piece has
+      // its own transactionID but the same ref, so keying on the ref would drop
+      // all but the first. This is the case that proves it does not.
+      const start = await balance();
+      const withdrawTxn = `wd-${randomUUID()}`;
+
+      await service.settle(
+        { command: "WITHDRAW", playerLogin: username, transactionId: withdrawTxn, bet: "10.00" },
+        { playerId: userId, currency: "TRY" },
+      );
+
+      for (const amount of ["5.00", "7.50", "2.25"]) {
+        await service.settle(
+          { command: "DEPOSIT", playerLogin: username, transactionId: `dp-${randomUUID()}`, win: amount, refTransactionId: withdrawTxn },
+          { playerId: userId, currency: "TRY" },
+        );
+      }
+
+      // 100 - 10 + 5 + 7.50 + 2.25 = 104.75
+      expect(await balance()).toBe(start - 1_000n + 500n + 750n + 225n);
+    });
+
+    it("rolls back a withdraw by its own transactionID", async () => {
+      const start = await balance();
+      const withdrawTxn = `wd-${randomUUID()}`;
+
+      await service.settle(
+        { command: "WITHDRAW", playerLogin: username, transactionId: withdrawTxn, bet: "30.00" },
+        { playerId: userId, currency: "TRY" },
+      );
+      expect(await balance()).toBe(start - 3_000n);
+
+      const rolled = await service.settle(
+        { command: "ROLLBACK", playerLogin: username, transactionId: withdrawTxn },
+        { playerId: userId, currency: "TRY" },
+      );
+
+      expect(rolled.balance).toBe("100.00");
+      expect(await balance()).toBe(start);
+
+      const again = await service.settle(
+        { command: "ROLLBACK", playerLogin: username, transactionId: withdrawTxn },
+        { playerId: userId, currency: "TRY" },
+      );
+      expect(again.duplicate).toBe(true);
+      expect(await balance()).toBe(start);
+    });
+
+    it("records a 0.00 win without moving money, and can still roll it back", async () => {
+      const start = await balance();
+      const depositTxn = `dp-${randomUUID()}`;
+
+      const credited = await service.settle(
+        { command: "DEPOSIT", playerLogin: username, transactionId: depositTxn, win: "0.00", refTransactionId: "ref-zero" },
+        { playerId: userId, currency: "TRY" },
+      );
+
+      // The provider still expects a real balance back, not 0.00.
+      expect(credited.balance).toBe("100.00");
+      expect(await balance()).toBe(start);
+
+      const rolled = await service.settle(
+        { command: "ROLLBACK", playerLogin: username, transactionId: depositTxn },
+        { playerId: userId, currency: "TRY" },
+      );
+      expect(rolled.duplicate).toBe(false);
+      expect(await balance()).toBe(start);
+    });
+
+    it("rejects a withdraw larger than the balance", async () => {
+      const start = await balance();
+
+      await expect(
+        service.settle(
+          { command: "WITHDRAW", playerLogin: username, transactionId: `wd-${randomUUID()}`, bet: "5000.00" },
+          { playerId: userId, currency: "TRY" },
+        ),
+      ).rejects.toThrow(/Yetersiz bakiye/);
+
+      expect(await balance()).toBe(start);
+    });
+  });
 });

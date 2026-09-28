@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { decryptSecret, encryptSecret, maskSecret } from "../lib/secrets.js";
-import { PROVIDER_ENV_KEYS, isSecretKey, publicValues } from "../services/provider-config.js";
+import { databaseAvailable, SKIP_REASON } from "../test-support/infrastructure.js";
+import {
+  PROVIDER_ENV_KEYS,
+  isSecretKey,
+  publicValues,
+  saveProviderConfig,
+} from "../services/provider-config.js";
+
+const hasDatabase = await databaseAvailable();
 
 describe("provider credential encryption", () => {
   it("round-trips a secret", () => {
@@ -48,4 +56,46 @@ describe("provider config exposure", () => {
     expect(keys).toContain("GREG_MORN_SECRET_KEY");
     expect(keys).toContain("BETSKILLA_CALLBACK_SECRET");
   });
+
+  it("exposes the Cryptomus merchant and payout keys to the panel", () => {
+    const keys = PROVIDER_ENV_KEYS.crypto!;
+    expect(keys).toContain("CRYPTO_MERCHANT_ID");
+    expect(keys).toContain("CRYPTO_PAYOUT_API_KEY");
+    expect(isSecretKey("CRYPTO_PAYOUT_API_KEY")).toBe(true);
+    expect(isSecretKey("CRYPTO_MERCHANT_ID")).toBe(false);
+  });
 });
+
+/**
+ * Regression guard for the credential-save path.
+ *
+ * `applyProviderConfigs` used to write GAME_AGGREGATOR for every enabled row, so
+ * saving a PSP or KYC provider replaced the game aggregator with an unrelated
+ * provider name and silently disabled external games. Only a gameAggregator row
+ * may own that variable.
+ */
+describe.skipIf(!hasDatabase)("provider config env application", () => {
+  it("does not let a non-aggregator save overwrite GAME_AGGREGATOR", async () => {
+    const previous = process.env.GAME_AGGREGATOR;
+    try {
+      process.env.GAME_AGGREGATOR = "gregmorn";
+      await saveProviderConfig({
+        kind: "psp",
+        provider: "payfix",
+        values: { PSP_PROVIDER: "payfix", PSP_BASE_URL: "https://psp.example.com", PSP_API_KEY: "k" },
+        actorId: "test",
+      });
+      expect(process.env.GAME_AGGREGATOR).toBe("gregmorn");
+    } finally {
+      if (previous === undefined) delete process.env.GAME_AGGREGATOR;
+      else process.env.GAME_AGGREGATOR = previous;
+    }
+  });
+});
+
+if (!hasDatabase) {
+  // Surfaces the skip reason in the run output instead of hiding it.
+  describe("infrastructure", () => {
+    it.skip(SKIP_REASON, () => {});
+  });
+}

@@ -1,19 +1,19 @@
 /**
- * Imports the loginxgamesapi catalogue into our game tables.
+ * Imports the loginxgamesapi / GitSlotPark catalogue into our game tables.
  *
  * Run with: npm run sync:loginx --workspace @aurora/engine
  *
  * Reads the four vendor catalogues through the LoginxGamesAggregator and stores
- * every game as INACTIVE. That is deliberate: the vendor has not exposed a
- * launch endpoint, so a published row would show up in the lobby and fail the
- * moment a player clicked it. Storing them inactive lets the content be
- * reviewed and edited from the admin panel while the launch call is still being
- * negotiated, and a later sync flips them on with no code change.
+ * every game as INACTIVE. Launch (userAuth) and the five wallet callbacks are
+ * implemented, but a row must not appear in the lobby until the operator has
+ * confirmed the vendor credentials — an active row on a half-configured
+ * platform fails the moment a player clicks it. Activating from the admin panel
+ * is the deliberate go-live step.
  *
  * Idempotent: games are upserted on (provider, providerGameId), so re-running
  * refreshes metadata without touching player data, favourites or bets.
  *
- * Detail on the API and its current limits: docs/providers/loginx-games-api.md
+ * Detail on the API and its contract: docs/providers/loginx-games-api.md
  */
 import { PrismaClient } from "@prisma/client";
 import { env } from "../src/lib/env.js";

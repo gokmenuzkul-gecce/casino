@@ -101,19 +101,44 @@ export class PaymentService {
       },
     });
 
+    // CRYPTO runs on its own adapter: the flow is a hosted payment page rather
+    // than a card-form deposit, and only it can be settled by the crypto
+    // webhook. Everything else stays on the PSP.
+    const useCrypto = input.method === "CRYPTO" && this.providers.crypto.isConfigured;
+
     let providerResult;
+    let redirectUrl: string | undefined;
+    let instructions: string | undefined;
     try {
-      providerResult = await this.providers.psp.createDeposit({
-        reference,
-        amount: fromMinor(amount, input.currency as never),
-        currency: input.currency,
-        method: input.method,
-        playerId: input.userId,
-        returnUrl: `${env.appUrl}/wallet?ref=${reference}`,
-        callbackUrl: `${env.apiPublicUrl}/webhooks/psp`,
-        ip: input.ip,
-        userAgent: input.userAgent,
-      });
+      if (useCrypto) {
+        const invoice = await this.providers.crypto.createInvoice({
+          reference,
+          amount: fromMinor(amount, input.currency as never),
+          currency: input.currency,
+          callbackUrl: `${env.apiPublicUrl}/webhooks/crypto`,
+          returnUrl: `${env.appUrl}/wallet?ref=${reference}`,
+        });
+        providerResult = { providerRef: invoice.providerRef, status: invoice.status, raw: invoice };
+        redirectUrl = invoice.url;
+        instructions = invoice.address
+          ? `Gonderilecek adres: ${invoice.address}${invoice.amount ? ` (${invoice.amount} ${invoice.currency ?? ""})` : ""}`
+          : undefined;
+      } else {
+        const deposit = await this.providers.psp.createDeposit({
+          reference,
+          amount: fromMinor(amount, input.currency as never),
+          currency: input.currency,
+          method: input.method,
+          playerId: input.userId,
+          returnUrl: `${env.appUrl}/wallet?ref=${reference}`,
+          callbackUrl: `${env.apiPublicUrl}/webhooks/psp`,
+          ip: input.ip,
+          userAgent: input.userAgent,
+        });
+        providerResult = { providerRef: deposit.providerRef, status: deposit.status, raw: deposit };
+        redirectUrl = deposit.redirectUrl;
+        instructions = deposit.instructions;
+      }
     } catch (error) {
       await prisma.paymentIntent.update({
         where: { id: intent.id },
@@ -147,9 +172,9 @@ export class PaymentService {
       fee: fromMinor(fee, input.currency as never),
       net: fromMinor(net, input.currency as never),
       currency: input.currency,
-      redirectUrl: providerResult.redirectUrl,
-      instructions: providerResult.instructions,
-      mode: this.providers.psp.mode,
+      redirectUrl,
+      instructions,
+      mode: useCrypto ? this.providers.crypto.mode : this.providers.psp.mode,
     };
   }
 
@@ -298,21 +323,32 @@ export class PaymentService {
     if (intent.direction !== "WITHDRAWAL") throw Errors.validation("Yanlis odeme yonu");
     if (intent.status !== "PENDING") throw Errors.validation(`Bu odeme ${intent.status} durumunda`);
 
-    const result = await this.providers.psp.createWithdrawal({
-      reference: intent.reference,
-      amount: fromMinor(intent.amount, intent.currency as never),
-      currency: intent.currency,
-      method: intent.method,
-      playerId: intent.userId,
-      iban: intent.iban ?? undefined,
-      walletAddress: intent.walletAddress ?? undefined,
-      accountHolder: intent.accountHolder ?? undefined,
-      callbackUrl: `${env.apiPublicUrl}/webhooks/psp`,
-    });
+    // CRYPTO withdrawals go to the crypto adapter; only it holds the payout key.
+    const useCrypto = intent.method === "CRYPTO" && this.providers.crypto.isConfigured;
+
+    const result = useCrypto
+      ? await this.providers.crypto.createPayout({
+          reference: intent.reference,
+          amount: fromMinor(intent.amount, intent.currency as never),
+          currency: intent.currency,
+          address: intent.walletAddress ?? "",
+          callbackUrl: `${env.apiPublicUrl}/webhooks/crypto`,
+        })
+      : await this.providers.psp.createWithdrawal({
+          reference: intent.reference,
+          amount: fromMinor(intent.amount, intent.currency as never),
+          currency: intent.currency,
+          method: intent.method,
+          playerId: intent.userId,
+          iban: intent.iban ?? undefined,
+          walletAddress: intent.walletAddress ?? undefined,
+          accountHolder: intent.accountHolder ?? undefined,
+          callbackUrl: `${env.apiPublicUrl}/webhooks/psp`,
+        });
 
     if (result.status === "FAILED") {
       await this.failWithdrawal(intent.id, result.providerRef, "Saglayici reddetti");
-      throw Errors.providerError(this.providers.psp.name, "Cekim reddedildi");
+      throw Errors.providerError(useCrypto ? this.providers.crypto.name : this.providers.psp.name, "Cekim reddedildi");
     }
 
     await prisma.paymentIntent.update({
@@ -438,7 +474,10 @@ export class PaymentService {
       throw Errors.forbidden("Webhook imzasi gecersiz");
     }
 
-    const callback = this.providers.psp.parseWebhook(params.payload);
+    const callback =
+      adapter === this.providers.crypto
+        ? this.providers.crypto.parseWebhook(params.payload)
+        : this.providers.psp.parseWebhook(params.payload);
     const intent = await prisma.paymentIntent.findUnique({ where: { reference: callback.reference } });
     if (!intent) {
       await prisma.webhookEvent.update({
@@ -455,6 +494,11 @@ export class PaymentService {
 
     if (intent.direction === "DEPOSIT" && callback.status === "COMPLETED") {
       await this.creditDeposit(intent.id);
+    } else if (intent.direction === "DEPOSIT" && (callback.status === "FAILED" || callback.status === "CANCELLED") && intent.status === "PENDING") {
+      await prisma.paymentIntent.update({
+        where: { id: intent.id },
+        data: { status: "FAILED", failureReason: callback.failureReason ?? "Saglayici hatasi" },
+      });
     } else if (intent.direction === "WITHDRAWAL") {
       if (callback.status === "COMPLETED") {
         await prisma.paymentIntent.update({

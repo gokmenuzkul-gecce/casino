@@ -134,6 +134,8 @@ export interface CryptoPaymentRequest {
   amount: string;
   currency: string;
   callbackUrl: string;
+  /** Where the player lands after paying, and where to send them to pay. */
+  returnUrl?: string;
 }
 
 export interface CryptoPaymentResult {
@@ -144,12 +146,41 @@ export interface CryptoPaymentResult {
   expiresAt?: string;
   qrCode?: string;
   status: string;
+  /** Hosted payment page to redirect the player to, when the provider has one. */
+  url?: string;
+}
+
+/** Normalised crypto callback, matching the PSP callback vocabulary. */
+export interface ParsedCryptoCallback {
+  reference: string;
+  providerRef: string;
+  status: "COMPLETED" | "FAILED" | "CANCELLED" | "PENDING";
+  amount?: string;
+  currency?: string;
+  failureReason?: string;
+}
+
+export interface CryptoPayoutRequest {
+  reference: string;
+  amount: string;
+  currency: string;
+  /** Destination wallet address for the payout. */
+  address: string;
+  callbackUrl: string;
+}
+
+export interface CryptoPayoutResult {
+  providerRef: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  raw?: unknown;
 }
 
 export interface CryptoAdapter extends ProviderAdapter {
   readonly kind: "crypto";
   createInvoice(request: CryptoPaymentRequest): Promise<CryptoPaymentResult>;
+  createPayout(request: CryptoPayoutRequest): Promise<CryptoPayoutResult>;
   verifyWebhook(rawBody: string, headers: Record<string, string | undefined>): boolean;
+  parseWebhook(payload: Record<string, unknown>): ParsedCryptoCallback;
 }
 
 export class DisabledCrypto implements CryptoAdapter {
@@ -161,8 +192,14 @@ export class DisabledCrypto implements CryptoAdapter {
   async createInvoice(): Promise<CryptoPaymentResult> {
     throw Errors.providerDisabled("Kripto odeme saglayicisi");
   }
+  async createPayout(): Promise<CryptoPayoutResult> {
+    throw Errors.providerDisabled("Kripto odeme saglayicisi");
+  }
   verifyWebhook(): boolean {
     return false;
+  }
+  parseWebhook(): ParsedCryptoCallback {
+    return { reference: "", providerRef: "", status: "PENDING" };
   }
   async healthCheck(): Promise<ProviderHealth> {
     return { kind: this.kind, provider: this.name, mode: this.mode, configured: false, reachable: null, checkedAt: new Date().toISOString(), detail: "CRYPTO_PROVIDER bos" };
@@ -198,7 +235,33 @@ export class RestCrypto implements CryptoAdapter {
       expiresAt: str(response.expiration_estimate_date ?? response.expiresAt),
       qrCode: str(response.qr_code ?? response.qrCode),
       status: String(response.status ?? "PENDING"),
+      url: str(response.invoice_url ?? response.url),
     };
+  }
+
+  async createPayout(request: CryptoPayoutRequest): Promise<CryptoPayoutResult> {
+    if (!this.isConfigured) throw Errors.providerDisabled("Kripto odeme saglayicisi");
+    const response = await this.http.request<Record<string, unknown>>({
+      method: "POST",
+      path: "/payout",
+      body: {
+        order_id: request.reference,
+        amount: request.amount,
+        currency: request.currency,
+        address: request.address,
+        callback_url: request.callbackUrl,
+      },
+    });
+    const raw = String(response.status ?? "").toLowerCase();
+    const status: CryptoPayoutResult["status"] =
+      ["finished", "complete", "completed", "paid"].includes(raw)
+        ? "COMPLETED"
+        : ["failed", "fail", "rejected", "expired"].includes(raw)
+          ? "FAILED"
+          : raw === "processing"
+            ? "PROCESSING"
+            : "PENDING";
+    return { providerRef: String(response.id ?? response.uuid ?? ""), status, raw: response };
   }
 
   verifyWebhook(rawBody: string, headers: Record<string, string | undefined>): boolean {
@@ -206,6 +269,26 @@ export class RestCrypto implements CryptoAdapter {
     const signature = headers["x-signature"] ?? headers["hmac"] ?? headers["x-crypto-signature"];
     if (!signature) return false;
     return verifyHmac(this.config.webhookSecret, rawBody, signature);
+  }
+
+  parseWebhook(payload: Record<string, unknown>): ParsedCryptoCallback {
+    const raw = String(payload.payment_status ?? payload.status ?? "").toLowerCase();
+    const status: ParsedCryptoCallback["status"] =
+      ["confirmed", "finished", "complete", "completed", "paid"].includes(raw)
+        ? "COMPLETED"
+        : ["failed", "fail", "expired", "cancelled", "canceled"].includes(raw)
+          ? raw.includes("cancel")
+            ? "CANCELLED"
+            : "FAILED"
+          : "PENDING";
+    return {
+      reference: String(payload.order_id ?? payload.reference ?? ""),
+      providerRef: String(payload.invoice_id ?? payload.id ?? payload.uuid ?? ""),
+      status,
+      amount: str(payload.price_amount ?? payload.amount),
+      currency: str(payload.price_currency ?? payload.currency),
+      failureReason: status === "FAILED" ? `Durum: ${raw}` : undefined,
+    };
   }
 
   async healthCheck(): Promise<ProviderHealth> {

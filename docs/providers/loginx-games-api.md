@@ -1,9 +1,12 @@
-# loginxgamesapi / gitamus — verified contract and the gaps
+# loginxgamesapi / GitSlotPark — verified contract
 
 This is a *different* aggregator from the one documented in
-`gregmorn-openapi.json`. It arrived as four per-vendor credential sets, each on
-its own host. Everything below was verified live against the Stage credentials
-supplied on 2026-09-28; nothing here is inferred from a spec.
+`gregmorn-openapi.json`. It fronts four vendors behind one GitSlotPark Seamless
+Wallet API v2 contract. The catalogue section below was verified live against the
+Stage credentials supplied on 2026-09-28; the launch and wallet sections were
+reverse-engineered from the four official Postman collections (`GitSlotPark
+Seamless Wallet APIV2 with FreeSpin`, `GitSlotPark PGSoft Seamless API`, `Amatic
+API`, `API LX Amusnet Seamless Wallet API`).
 
 ## What verifiably works
 
@@ -55,36 +58,80 @@ Send a browser `User-Agent` and throttle.
 (`/GameList`). `/api/v1/games`, `/swagger.json` and every `/api/...` variant
 return 404.
 
-## What is missing — and it is the whole point
+## The Seamless Wallet API v2 contract
 
-**`/GameList` is the only endpoint that answers.** Every launch-shaped path tried
-(`/GameUrl`, `/GetGameUrl`, `/Launch`, `/LaunchGame`, `/OpenGame`, `/GameURL`,
-`/GameSession`, `/Play`, `/StartGame`, and more) returns 404 across all four
-hosts. Query parameters on `/GameList` (`?type=live`, `?vendor=…`, `?limit=`,
-`?page=`) are silently ignored — the same full list comes back every time.
+The Postman collections define a five-endpoint callback family plus a launch
+call. The `callbackdomain` placeholder in the collections is the operator's own
+host: the base path is configured as `WALLET_CALLBACK_BASE` (default
+`/webhooks/callback`) and all five paths below it are registered verbatim.
 
-So:
+### Launch — `POST /userAuth`
 
-- **There is no way to open a game.** We can import the catalogue but cannot
-  launch a session, because the launch call is not exposed.
-- **There is no wallet/callback contract on our side to match.** The vendor says
-  the API is wired to our callback URL, but we have no documented definition of
-  what they POST, or of the signature. A third-party description of this call
-  family specifies `md5(timestamp + salt_key)` carried with a `timestamp` and
-  `key` — our `/webhooks/aggregator/gregmorn/wallet` route verifies HMAC-SHA256
-  and would reject that. This must be confirmed, not guessed: balance is money.
-- **There are no live tables in this catalogue.** All 1,402 titles are slots or
-  instant games. Grepping for live-table names surfaces only slot titles that
-  happen to contain a word (`Dragon Tiger`, `Dragon Tiger Luck`, `Speed Winner`,
-  `Roulette Royal`). Pragmatic Play *Live* is not part of this vendor set.
+Bearer token auth (`Authorization: Bearer <apitoken>`). Request body:
 
-Without the launch and wallet definitions this integration cannot move a single
-euro, no matter how many games we list. Listing them anyway would put ~1,400
-tiles in the lobby that fail on click — which is exactly the failure mode the
-BetSkilla importer guards against with its playability probe.
+```json
+{ "agentID": "Partner01", "userID": "Player01", "isaffiliate": false,
+  "lang": "fr", "gameid": 2001, "lobbyUrl": "https://mycasino.com/lobby" }
+```
 
-## The one thing that unblocks it
+Response carries the landing URL: `{ "code": 0, "message": "OK", "url": "…" }`.
+Codes other than 0 are failures (e.g. `101` = invalid api token).
 
-The full API documentation for this aggregator: the game-launch call, and the
-seamless-wallet callback contract with its signature definition. See
-`docs/providers/loginx-games-api-request.md` for the message to send.
+### Callbacks
+
+All five are signed and all five are idempotent; **only an HTTP 200 is a
+successful acknowledgement** (so a business rejection is 200 with a non-zero
+code, never a 4xx). Each callback echoes the resulting `balance`, and the
+money-moving ones (`BetWin`, `Withdraw`, `Deposit`) also return
+`platformTransactionID`.
+
+| Operation | Sign parameter order | Effect |
+|---|---|---|
+| `GetBalance` | `agentID, userid, gameid` | read balance |
+| `BetWin` | `agentID, userid, betAmount, winAmount, transactionID, roundID, gameID` | debit bet, credit win |
+| `Withdraw` | `agentID, userid, amount, transactionID, roundID, gameID` | debit only (payout unknown yet) |
+| `Deposit` | `agentID, userid, amount, refTransactionID, transactionID, roundID, gameID` | credit a win for a prior withdraw |
+| `RollbackTransaction` | `agentID, userID, refTransactionID, gameID` | reverse a referenced transaction |
+
+`Withdraw` + `Deposit` are the split-round pair: a bet whose payout is not yet
+known is a `Withdraw`, and each payout piece arrives as its own `Deposit` sharing
+the withdraw's `refTransactionID`. **PG Soft and Amatic send several `Deposit`s
+for one `Withdraw`** — every piece has a distinct `transactionID`, so idempotency
+keys on `transactionID`, never on `refTransactionID`.
+
+`freeSpinID`, `isBonusBuy` and `endRound` are present on some callbacks and are
+documented as **not participating in the sign**, so they are ignored when signing
+and verifying.
+
+### Creating the sign
+
+HMAC-SHA-256 over the concatenation of the parameters in the order above, with
+the vendor's secret key, uppercased hex. Amounts are always formatted to exactly
+two decimal places.
+
+Published test vector (Withdraw):
+
+```
+message = Partner01 + Player01 + 12.30 + 474e1a293c2f4e7ab122c52d68423fcb + ab9c15f2efdd46278e4a56b303127234
+key     = 1234567890
+sign    = 475D834ACC3AB61D7DF4EA42751C6275387BC1787A098D2D0E091698D9BF2043
+```
+
+### Result codes
+
+`0` success, `1` general error, `2` wrong params, `3` invalid sign, `4` invalid
+agent, `5` user not found, `6` insufficient funds, `7` invalid api token,
+`8` reference not found, `9` already rolled back, `11` duplicate. The set is per
+operation: `RollbackTransaction` answers only `0,1,2,3,4,5,9`, so an unmatched
+rollback reference is reported as `9`, not `8`.
+
+## Use in this repo
+
+- Adapter: `apps/engine/src/providers/loginx.ts` — catalogue, launch, callback
+  verification/parsing, and the response envelopes.
+- Callback routes: `apps/engine/src/routes/webhooks.ts`, under
+  `WALLET_CALLBACK_BASE`.
+- Settlement: `apps/engine/src/services/aggregator-wallet.ts`.
+- Catalogue import: `npm run sync:loginx` or the admin panel button.
+- Credentials: `LOGINX_<VENDOR>_{AGENTID,APITOKEN,SECRETKEY,HOST}` — see
+  `.env.example`.

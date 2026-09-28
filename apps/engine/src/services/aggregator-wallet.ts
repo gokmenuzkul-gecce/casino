@@ -71,8 +71,118 @@ export class AggregatorWalletService {
         return this.readBalance(ctx);
       case "WRITE_BET":
         return this.writeBet(callback, ctx);
+      case "WITHDRAW":
+        return this.debit(callback, ctx);
+      case "DEPOSIT":
+        return this.credit(callback, ctx);
       case "ROLLBACK":
         return this.rollback(callback, ctx);
+    }
+  }
+
+  /**
+   * A standalone debit, for providers that send the wager on its own and the
+   * win later (`Withdraw` then one or more `Deposit`). Keyed on its own
+   * transactionId, which is also what a later rollback addresses, so a reversal
+   * finds exactly this row.
+   */
+  private async debit(callback: ParsedWalletCallback, context: SettleContext): Promise<SettlementResult> {
+    return this.applySignedMovement(callback, context, -1n, "Saglayici bahis kesintisi");
+  }
+
+  /**
+   * A standalone credit, for providers that report the win separately from the
+   * wager. One `Withdraw` may be followed by several `Deposit`s sharing a
+   * refTransactionID — a free-spin round pays out in pieces — so each deposit
+   * carries its own transactionId and is applied on its own rather than being
+   * aggregated against the ref, which would drop all but the first.
+   */
+  private async credit(callback: ParsedWalletCallback, context: SettleContext): Promise<SettlementResult> {
+    return this.applySignedMovement(callback, context, 1n, "Saglayici kazanc odemesi");
+  }
+
+  /**
+   * Move money in one direction and return the new balance, idempotently.
+   *
+   * `sign` selects the direction: -1 debits the player, +1 credits them. The
+   * ledger call is the same in both cases, so the only thing that varies is the
+   * sign and the description.
+   */
+  private async applySignedMovement(
+    callback: ParsedWalletCallback,
+    context: SettleContext,
+    sign: 1n | -1n,
+    description: string,
+  ): Promise<SettlementResult> {
+    const transactionId = callback.transactionId;
+    if (!transactionId) throw Errors.validation("transactionId zorunlu");
+
+    const raw = callback.bet ?? callback.win ?? "";
+    if (raw === "") throw Errors.validation("Tutar zorunlu");
+    const magnitude = toMinor(raw, context.currency);
+    if (magnitude < 0n) throw Errors.validation("Negatif tutar kabul edilmez");
+
+    const idempotencyKey = this.key(transactionId);
+    if (await this.findSettled(idempotencyKey)) {
+      return {
+        balance: fromMinor(await this.balanceOf(context.playerId, context.currency), context.currency),
+        currency: context.currency,
+        transactionId,
+        duplicate: true,
+      };
+    }
+
+    /*
+     * A 0.00 movement (a losing spin still reports its win as 0.00) is real and
+     * must be acknowledged, but the ledger refuses non-positive legs. It is
+     * therefore recorded with the balance left untouched, so its transactionId
+     * can still be found by a later rollback instead of answering "unknown
+     * reference" to a reversal the provider considers valid.
+     */
+    const amount = magnitude;
+    const isZero = amount === 0n;
+    const { ledger } = await import("./ledger.js");
+
+    try {
+      const posted = await ledger.post({
+        userId: context.playerId,
+        type: sign < 0n ? TxType.BET : TxType.WIN,
+        amount,
+        currency: context.currency,
+        legs: this.legsFor(sign < 0n ? -(isZero ? 1n : amount) : (isZero ? 1n : amount)),
+        applyBalance: !isZero,
+        provider: this.providerName,
+        providerRef: transactionId,
+        idempotencyKey,
+        description,
+        metadata: {
+          amount: amount.toString(),
+          normalized: fromMinor(amount, context.currency),
+          refTransactionId: callback.refTransactionId,
+          sessionId: callback.sessionId,
+          gameId: callback.gameId,
+          roundId: callback.roundId,
+          info: callback.info,
+        },
+      });
+
+      // A zero movement carries no balance change, so the ledger reports nothing
+      // for it; read the wallet directly rather than echoing a bogus 0.00.
+      const balanceAfter = isZero
+        ? await this.balanceOf(context.playerId, context.currency)
+        : posted.balanceAfter;
+
+      return {
+        balance: fromMinor(balanceAfter, context.currency),
+        currency: context.currency,
+        transactionId,
+        duplicate: false,
+      };
+    } catch (error) {
+      if (error instanceof AppError && error.code === "INSUFFICIENT_FUNDS") {
+        throw Errors.insufficientFunds();
+      }
+      throw error;
     }
   }
 
@@ -186,7 +296,15 @@ export class AggregatorWalletService {
      */
     const moved = netMovement(original);
     const amount = moved < 0n ? -moved : moved;
+
+    /*
+     * A zero-amount row (a 0.00 win) moved nothing, so there is nothing to
+     * reverse. It is still marked as rolled back with a zero-value entry, so a
+     * repeat answers "already rolled back" rather than "unknown reference".
+     */
+    const isZero = amount === 0n;
     const reverseDirection = moved < 0n ? LedgerDirection.CREDIT : LedgerDirection.DEBIT;
+    const legAmount = isZero ? 1n : amount;
 
     const posted = await ledger.post({
       userId: context.playerId,
@@ -194,13 +312,14 @@ export class AggregatorWalletService {
       amount,
       currency: context.currency,
       legs: [
-        { accountType: LedgerAccountType.PLAYER_REAL, direction: reverseDirection, amount },
+        { accountType: LedgerAccountType.PLAYER_REAL, direction: reverseDirection, amount: legAmount },
         {
           accountType: LedgerAccountType.HOUSE,
           direction: reverseDirection === LedgerDirection.CREDIT ? LedgerDirection.DEBIT : LedgerDirection.CREDIT,
-          amount,
+          amount: legAmount,
         },
       ],
+      applyBalance: !isZero,
       provider: this.providerName,
       providerRef: transactionId,
       idempotencyKey: rollbackKey,
@@ -209,7 +328,10 @@ export class AggregatorWalletService {
     });
 
     return {
-      balance: fromMinor(posted.balanceAfter, context.currency),
+      balance: fromMinor(
+        isZero ? await this.balanceOf(context.playerId, context.currency) : posted.balanceAfter,
+        context.currency,
+      ),
       currency: context.currency,
       transactionId,
       duplicate: false,

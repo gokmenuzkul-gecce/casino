@@ -52,9 +52,11 @@ export const PROVIDER_ENV_KEYS: Record<string, string[]> = {
     "LOGINX_AMUSNET_APITOKEN",
     "LOGINX_AMUSNET_SECRETKEY",
     "LOGINX_AMUSNET_HOST",
+    // Base path the provider posts the five GitSlotPark callbacks to.
+    "WALLET_CALLBACK_BASE",
   ],
   psp: ["PSP_PROVIDER", "PSP_BASE_URL", "PSP_API_KEY", "PSP_SECRET_KEY", "PSP_MERCHANT_ID", "PSP_WEBHOOK_SECRET"],
-  crypto: ["CRYPTO_PROVIDER", "CRYPTO_BASE_URL", "CRYPTO_API_KEY", "CRYPTO_WEBHOOK_SECRET"],
+  crypto: ["CRYPTO_PROVIDER", "CRYPTO_BASE_URL", "CRYPTO_API_KEY", "CRYPTO_WEBHOOK_SECRET", "CRYPTO_MERCHANT_ID", "CRYPTO_PAYOUT_API_KEY"],
   kyc: ["KYC_PROVIDER", "KYC_BASE_URL", "KYC_API_KEY", "KYC_WEBHOOK_SECRET"],
   risk: ["RISK_PROVIDER", "RISK_BASE_URL", "RISK_API_KEY"],
   sms: ["SMS_PROVIDER", "SMS_ENDPOINT", "SMS_API_KEY", "SMS_SENDER"],
@@ -92,8 +94,10 @@ export async function applyProviderConfigs(): Promise<void> {
   for (const row of rows) {
     const values = readValues(row.config);
     // The provider profile itself (`gregmorn`, `betskilla`, …) is how the
-    // registry picks an adapter, so it is written back on every apply.
-    process.env.GAME_AGGREGATOR = row.provider;
+    // registry picks an aggregator adapter. Only the aggregator owns this var:
+    // writing it for every row would let a PSP/KYC save overwrite the game
+    // aggregator with an unrelated provider name.
+    if (row.kind === "gameAggregator" && row.provider !== "") process.env.GAME_AGGREGATOR = row.provider;
     for (const [key, value] of Object.entries(values)) {
       if (value !== "") process.env[key] = value;
     }
@@ -152,7 +156,7 @@ export async function saveProviderConfig(input: {
     // Applied here as well as at boot so a save takes effect immediately.
     process.env[key] = value;
   }
-  process.env.GAME_AGGREGATOR = input.provider;
+  if (input.kind === "gameAggregator" && input.provider !== "") process.env.GAME_AGGREGATOR = input.provider;
 
   const encrypted: Record<string, string> = {};
   for (const [key, value] of Object.entries(merged)) encrypted[key] = encryptSecret(value);

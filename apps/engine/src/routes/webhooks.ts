@@ -36,38 +36,18 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
     const payload = (typeof request.body === "object" && request.body !== null ? request.body : {}) as Record<string, unknown>;
     const headers = request.headers as Record<string, string | undefined>;
 
-    const verified = app.providers.crypto.verifyWebhook(rawBody, headers);
-    const event = await prisma.webhookEvent.create({
-      data: {
-        provider: app.providers.crypto.name,
-        eventType: String(payload.event ?? payload.status ?? "crypto.updated"),
-        payload: payload as never,
-        verified,
-      },
+    // Delegated so deposits and payouts share one settlement path: the shared
+    // handler verifies the payload-borne signature, records the event and
+    // applies the direction (credit on deposit, settle/release on withdrawal).
+    const result = await app.payments.handleProviderCallback({
+      provider: app.providers.crypto.name,
+      payload,
+      rawBody,
+      headers,
+      eventType: String(payload.type ?? payload.status ?? "crypto.updated"),
     });
 
-    if (!verified) {
-      await prisma.webhookEvent.update({
-        where: { id: event.id },
-        data: { error: "Imza dogrulanamadi", processed: true, processedAt: new Date() },
-      });
-      throw Errors.forbidden("Webhook imzasi gecersiz");
-    }
-
-    const reference = String(payload.order_id ?? payload.reference ?? "");
-    const status = String(payload.payment_status ?? payload.status ?? "").toLowerCase();
-    const intent = await prisma.paymentIntent.findUnique({ where: { reference } });
-
-    if (intent && ["confirmed", "finished", "complete", "completed"].includes(status)) {
-      await app.payments.creditDeposit(intent.id);
-    }
-
-    await prisma.webhookEvent.update({
-      where: { id: event.id },
-      data: { reference, processed: true, processedAt: new Date() },
-    });
-
-    return reply.send({ received: true });
+    return reply.send({ received: true, handled: result.handled });
   });
 
   /** KYC decision callbacks. */
@@ -266,10 +246,22 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
     const login = callback?.playerLogin ?? String(payload.login ?? "");
     const currency = String(payload.currency ?? env.currency);
 
+    /*
+     * Providers disagree on how a rejection is expressed. Gregmorn treats a
+     * non-200 as "do not start the spin" and needs a 400. The GitSlotPark
+     * family documents 200 as the only expected status and treats a non-200 as
+     * a failed operation to be rolled back, answering errors in the body
+     * instead. The adapter declares which it wants; 400 is the default so an
+     * adapter that has not thought about it keeps the safer behaviour.
+     */
+    const failStatus = aggregator.walletErrorStatus ?? 400;
+    const failCode = aggregator.walletFailureCode?.bind(aggregator);
+    const settleCode = aggregator.errorCodeFor?.bind(aggregator);
+
     const event = await prisma.webhookEvent.create({
       data: {
         provider: aggregator.name,
-        eventType: String(payload.cmd ?? "wallet"),
+        eventType: String(payload.cmd ?? (callback?.command ?? "wallet")),
         reference: callback?.transactionId ?? "",
         payload: payload as never,
         verified,
@@ -287,23 +279,44 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
     if (!verified) {
       await finish(true, "Imza dogrulanamadi");
       return reply
-        .code(400)
-        .send(aggregator.walletError?.({ login, currency, message: "invalid signature" }) ?? { status: "fail" });
+        .code(failStatus)
+        .send(
+          aggregator.walletError?.({
+            login,
+            currency,
+            message: "invalid signature",
+            ...(failCode ? { code: failCode("invalid_signature") } : {}),
+          }) ?? { status: "fail" },
+        );
     }
 
     if (!callback) {
       await finish(true, "Desteklenmeyen komut");
       return reply
-        .code(400)
-        .send(aggregator.walletError?.({ login, currency, message: "unknown command" }) ?? { status: "fail" });
+        .code(failStatus)
+        .send(
+          aggregator.walletError?.({
+            login,
+            currency,
+            message: "unknown command",
+            ...(failCode ? { code: failCode("unknown_command") } : {}),
+          }) ?? { status: "fail" },
+        );
     }
 
     const user = await resolvePlayer(login);
     if (!user) {
       await finish(true, "Oyuncu bulunamadi");
       return reply
-        .code(400)
-        .send(aggregator.walletError?.({ login, currency, message: "player not found" }) ?? { status: "fail" });
+        .code(failStatus)
+        .send(
+          aggregator.walletError?.({
+            login,
+            currency,
+            message: "player not found",
+            ...(failCode ? { code: failCode("player_not_found") } : {}),
+          }) ?? { status: "fail" },
+        );
     }
 
     try {
@@ -316,18 +329,28 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 
       await finish(true);
       return reply.send(
-        aggregator.walletResponse?.({ login, balance: settled.balance, currency: settled.currency }) ?? settled,
+        aggregator.walletResponse?.({
+          login,
+          balance: settled.balance,
+          currency: settled.currency,
+          transactionId: settled.transactionId || undefined,
+        }) ?? settled,
       );
     } catch (error) {
       const message = error instanceof AppError ? error.message : "settlement failed";
       const insufficient = error instanceof AppError && error.code === "INSUFFICIENT_FUNDS";
       await finish(true, message);
       return reply
-        .code(400)
+        .code(failStatus)
         .send(
-          aggregator.walletError?.({ login, currency, message: insufficient ? "insufficient funds" : message }) ?? {
-            status: "fail",
-          },
+          aggregator.walletError?.({
+            login,
+            currency,
+            message: insufficient ? "insufficient funds" : message,
+            // Providers with a result-code table get the specific code, so
+            // "insufficient funds" arrives as 6 rather than a generic failure.
+            ...(settleCode ? { code: settleCode(error, callback.command) } : {}),
+          }) ?? { status: "fail" },
         );
     }
   };
@@ -336,6 +359,21 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
   app.post(`/webhooks/aggregator/${aggregatorName}/wallet`, walletCallback);
   if (aggregatorName !== "gregmorn") {
     app.post("/webhooks/aggregator/gregmorn/wallet", walletCallback);
+  }
+
+  /*
+   * GitSlotPark-family callbacks.
+   *
+   * That provider does not post to a single URL with a command field: it calls
+   * five fixed paths under a base path we give it at onboarding. The paths are
+   * therefore part of the contract and cannot be renamed, so they are registered
+   * verbatim under a configurable base — the operator tells the provider
+   * `<API_PUBLIC_URL><WALLET_CALLBACK_BASE>`. All five go to the same handler,
+   * which infers the operation from the body and the sign.
+   */
+  const walletBase = env.loginx.walletCallbackBase.replace(/\/+$/, "");
+  for (const operation of ["GetBalance", "BetWin", "Withdraw", "Deposit", "RollbackTransaction"]) {
+    app.post(`${walletBase}/${operation}`, walletCallback);
   }
 
   /** Affiliate postback: records a click and attributes the visitor. */
