@@ -100,11 +100,11 @@ export function GamesPage() {
 
   const heading = useMemo(() => {
     if (search) return `"${search}" icin sonuclar`;
-    if (flag === "jackpot") return "Jackpot Oyunlari";
-    if (flag === "new") return "Yeni Oyunlar";
+    if (flag === "jackpot") return "Jackpot Games";
+    if (flag === "new") return "New Games";
     if (category) return categoryMeta(category).label;
-    if (provider) return providers.find((p) => p.slug === provider)?.name ?? "Saglayici";
-    return "Oyun Katalogu";
+    if (provider) return providers.find((p) => p.slug === provider)?.name ?? "Provider";
+    return "Game Catalogue";
   }, [search, flag, category, provider, providers]);
 
   return (
@@ -122,13 +122,13 @@ export function GamesPage() {
             </span>
             <input
               className="header-search-input"
-              placeholder="Oyun ara..."
+              placeholder="Search games..."
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") update("search", searchDraft);
               }}
-              aria-label="Oyun ara"
+              aria-label="Search games"
             />
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => update("search", searchDraft)}>
@@ -201,7 +201,7 @@ export function GamesPage() {
         <SkeletonGrid count={12} />
       ) : games.length === 0 ? (
         <div className="card">
-          <Empty icon="🔍" title="Oyun bulunamadi" hint="Filtreleri degistirmeyi veya aramayi temizlemeyi deneyin." />
+          <Empty icon="🔍" title="No games found" hint="Try changing the filters or clearing the search." />
         </div>
       ) : (
         <>
@@ -246,7 +246,7 @@ export function PlayPage() {
   useEffect(() => {
     get<{ game: GameCardData }>(`/api/games/${slug}`)
       .then((result) => setGame(result.game))
-      .catch((err) => setError(err instanceof Error ? err.message : "Oyun yuklenemedi"));
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not load games"));
   }, [slug]);
 
   if (error) return <div className="page"><div className="alert alert-error">{error}</div></div>;
@@ -363,11 +363,11 @@ function ExternalGamePage({ slug, game }: { slug: string; game: GameCardData }) 
         else window.location.href = url;
       } else {
         tab?.close();
-        setError("Saglayici oturumu baslatilamadi. Agregator API bilgilerini girin.");
+        setError("Could not start the provider session. Enter the aggregator API credentials.");
       }
     } catch (err) {
       tab?.close();
-      setError(err instanceof Error ? err.message : "Oyun baslatilamadi");
+      setError(err instanceof Error ? err.message : "Could not launch game");
     } finally {
       setLaunching(false);
     }
@@ -431,7 +431,7 @@ function ExternalGamePage({ slug, game }: { slug: string; game: GameCardData }) 
         </button>
       </div>
 
-      {!user && <div className="small faint mt">Gercek para ile oynamak icin giris yapin.</div>}
+      {!user && <div className="small faint mt">Log in to play with real money.</div>}
     </div>
   );
 }

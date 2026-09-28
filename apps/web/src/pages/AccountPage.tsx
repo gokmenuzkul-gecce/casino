@@ -50,26 +50,26 @@ export function AccountPage() {
     setMessage(null);
     try {
       await post("/api/auth/password/change", passwordForm);
-      setMessage("Sifreniz degistirildi. Guvenlik icin tum oturumlar kapatildi.");
+      setMessage("Your password was changed. All sessions were closed for security.");
       setPasswordForm({ currentPassword: "", newPassword: "" });
       await logout();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sifre degistirilemedi");
+      setError(err instanceof Error ? err.message : "Could not change password");
     }
   };
 
-  if (!user) return <div className="page"><Alert kind="info">Giris yapmalisiniz.</Alert></div>;
+  if (!user) return <div className="page"><Alert kind="info">You must log in.</Alert></div>;
 
   return (
     <div className="page page-narrow">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Hesabim</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>Account</h1>
       {error && <Alert kind="error">{error}</Alert>}
       {message && <Alert kind="success">{message}</Alert>}
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(116px, 1fr))", gap: 10, marginBottom: 18 }}>
         <Link to="/wallet" className="quick-action">
           <span className="quick-action-icon">💳</span>
-          <span className="quick-action-label">Cuzdan</span>
+          <span className="quick-action-label">Wallet</span>
         </Link>
         <Link to="/history" className="quick-action">
           <span className="quick-action-icon">📊</span>
@@ -96,11 +96,11 @@ export function AccountPage() {
       <div className="card mb">
         <div className="card-title">Hesap Bilgileri</div>
         <div className="grid grid-2" style={{ gap: 12 }}>
-          <div className="row-between small"><span className="muted">Kullanici adi</span><span className="bold">{user.username}</span></div>
+          <div className="row-between small"><span className="muted">Username</span><span className="bold">{user.username}</span></div>
           <div className="row-between small"><span className="muted">E-posta</span><span className="bold">{user.email}</span></div>
-          <div className="row-between small"><span className="muted">Para birimi</span><span className="bold">{user.currency}</span></div>
-          <div className="row-between small"><span className="muted">Durum</span><Pill kind="success">{user.status}</Pill></div>
-          <div className="row-between small"><span className="muted">2FA</span><Pill kind={user.twoFactorEnabled ? "success" : "warning"}>{user.twoFactorEnabled ? "Aktif" : "Kapali"}</Pill></div>
+          <div className="row-between small"><span className="muted">Currency</span><span className="bold">{user.currency}</span></div>
+          <div className="row-between small"><span className="muted">Status</span><Pill kind="success">{user.status}</Pill></div>
+          <div className="row-between small"><span className="muted">2FA</span><Pill kind={user.twoFactorEnabled ? "success" : "warning"}>{user.twoFactorEnabled ? "Aktif" : "Disabled"}</Pill></div>
           {user.affiliateCode && (
             <div className="row-between small"><span className="muted">Davet kodunuz</span><span className="bold mono">{user.affiliateCode}</span></div>
           )}
@@ -108,9 +108,9 @@ export function AccountPage() {
       </div>
 
       <div className="card mb">
-        <div className="card-title">🔐 Iki Adimli Dogrulama</div>
+        <div className="card-title">🔐 Two-Factor Authentication</div>
         {user.twoFactorEnabled ? (
-          <div className="small muted">Hesabiniz 2FA ile korunuyor. Kapatmak icin sifre ve kod gerekir.</div>
+          <div className="small muted">Your account is protected with 2FA. Enter your password and code to disable it.</div>
         ) : twoFactor ? (
           <>
             <div className="alert alert-info">
@@ -118,7 +118,7 @@ export function AccountPage() {
             </div>
             <div className="mono small mb" style={{ wordBreak: "break-all" }}>{twoFactor.secret}</div>
             <div className="field">
-              <label>Dogrulama kodu</label>
+              <label>Verification code</label>
               <input className="input" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" placeholder="000000" />
             </div>
             <button className="btn btn-primary" onClick={enable2fa} disabled={code.length < 6}>Etkinlestir</button>
@@ -137,17 +137,17 @@ export function AccountPage() {
       </div>
 
       <div className="card mb">
-        <div className="card-title">🔑 Sifre Degistir</div>
+        <div className="card-title">🔑 Change Password</div>
         <form onSubmit={changePassword}>
           <div className="field">
             <label>Mevcut sifre</label>
             <input className="input" type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} required />
           </div>
           <div className="field">
-            <label>Yeni sifre</label>
+            <label>New password</label>
             <input className="input" type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} required minLength={8} />
           </div>
-          <button className="btn btn-primary" type="submit">Sifreyi Degistir</button>
+          <button className="btn btn-primary" type="submit">Change Password</button>
         </form>
       </div>
 
@@ -221,7 +221,7 @@ export function KycPage() {
     setBusy(true);
     try {
       const result = await post<{ status: string; reason?: string }>("/api/kyc/submit", form);
-      setNotice(result.status === "APPROVED" ? "Kimlik dogrulamaniz onaylandi!" : `Basvurunuz alindi: ${result.status}`);
+      setNotice(result.status === "APPROVED" ? "Your identity verification is approved!" : `Basvurunuz alindi: ${result.status}`);
       load();
       await refreshMe();
     } catch (err) {
@@ -231,19 +231,19 @@ export function KycPage() {
     }
   };
 
-  if (!user) return <div className="page"><Alert kind="info">Giris yapmalisiniz.</Alert></div>;
+  if (!user) return <div className="page"><Alert kind="info">You must log in.</Alert></div>;
 
   const status = profile?.status ?? "NOT_STARTED";
 
   return (
     <div className="page page-narrow">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Kimlik Dogrulama</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>Identity Verification</h1>
       {error && <Alert kind="error">{error}</Alert>}
       {notice && <Alert kind="success">{notice}</Alert>}
 
       <div className="card mb">
         <div className="row-between">
-          <span className="muted">Durum</span>
+          <span className="muted">Status</span>
           <Pill kind={status === "APPROVED" ? "success" : status === "REJECTED" ? "danger" : "warning"}>{status}</Pill>
         </div>
         {status === "APPROVED" && <div className="small muted mt">Seviye {profile?.level} — cekim yapabilirsiniz.</div>}
@@ -264,7 +264,7 @@ export function KycPage() {
             <div className="field">
               <label>Belge turu</label>
               <select className="select" value={form.documentType} onChange={(e) => setForm({ ...form, documentType: e.target.value })}>
-                <option value="NATIONAL_ID">Kimlik karti</option>
+                <option value="NATIONAL_ID">ID card</option>
                 <option value="PASSPORT">Pasaport</option>
                 <option value="DRIVERS_LICENSE">Ehliyet</option>
                 <option value="RESIDENCE_PERMIT">Oturma izni</option>
@@ -289,7 +289,7 @@ export function KycPage() {
               </div>
             </div>
             <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={busy}>
-              {busy ? "Gonderiliyor..." : "Basvuruyu Gonder"}
+              {busy ? "Sending..." : "Submit Application"}
             </button>
             <div className="tiny faint center mt">
               Verileriniz sifreli saklanir ve yalnizca dogrulama amaciyla islenir.
@@ -321,26 +321,26 @@ export function HistoryPage() {
     get<{ bonuses: typeof bonuses }>("/api/wallet/bonuses").then((r) => setBonuses(r.bonuses)).catch(() => undefined);
   }, [user]);
 
-  if (!user) return <div className="page"><Alert kind="info">Giris yapmalisiniz.</Alert></div>;
+  if (!user) return <div className="page"><Alert kind="info">You must log in.</Alert></div>;
 
   return (
     <div className="page">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Islem Gecmisi</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>History</h1>
 
       <div className="row mb" style={{ gap: 6 }}>
         {(["bets", "transactions", "bonuses"] as const).map((key) => (
           <button key={key} className={`btn btn-sm ${tab === key ? "btn-primary" : "btn-ghost"}`} onClick={() => setTab(key)}>
-            {key === "bets" ? "Bahisler" : key === "transactions" ? "Para Hareketleri" : "Bonuslar"}
+            {key === "bets" ? "Bets" : key === "transactions" ? "Transactions" : "Bonuses"}
           </button>
         ))}
       </div>
 
       {tab === "bets" && (
         <div className="card">
-          {bets.length === 0 ? <Empty icon="🎲" title="Bahis kaydi yok" /> : (
+          {bets.length === 0 ? <Empty icon="🎲" title="No bet records" /> : (
             <div className="table-wrap">
               <table className="table">
-                <thead><tr><th>Referans</th><th>Oyun</th><th>Bahis</th><th>Odeme</th><th>Katsayi</th><th>Sonuc</th><th>Tarih</th></tr></thead>
+                <thead><tr><th>Referans</th><th>Game</th><th>Bet</th><th>Odeme</th><th>Katsayi</th><th>Result</th><th>Date</th></tr></thead>
                 <tbody>
                   {bets.map((bet) => (
                     <tr key={bet.id}>
@@ -365,7 +365,7 @@ export function HistoryPage() {
           {transactions.length === 0 ? <Empty icon="💸" title="Hareket yok" /> : (
             <div className="table-wrap">
               <table className="table">
-                <thead><tr><th>Referans</th><th>Tur</th><th>Tutar</th><th>Aciklama</th><th>Durum</th><th>Tarih</th></tr></thead>
+                <thead><tr><th>Referans</th><th>Tur</th><th>Amount</th><th>Aciklama</th><th>Status</th><th>Date</th></tr></thead>
                 <tbody>
                   {transactions.map((tx) => (
                     <tr key={tx.id}>
@@ -386,7 +386,7 @@ export function HistoryPage() {
 
       {tab === "bonuses" && (
         <div className="grid grid-2">
-          {bonuses.length === 0 ? <Empty icon="🎁" title="Bonus yok" /> : bonuses.map((bonus) => (
+          {bonuses.length === 0 ? <Empty icon="🎁" title="No bonuses" /> : bonuses.map((bonus) => (
             <div className="card" key={bonus.id}>
               <div className="row-between mb">
                 <div>
@@ -395,7 +395,7 @@ export function HistoryPage() {
                 </div>
                 <Pill kind={statusKind(bonus.status)}>{bonus.status}</Pill>
               </div>
-              <div className="row-between small mb"><span className="muted">Tutar</span><span className="mono">{money(bonus.amount)}</span></div>
+              <div className="row-between small mb"><span className="muted">Amount</span><span className="mono">{money(bonus.amount)}</span></div>
               <div className="row-between small mb"><span className="muted">Kalan</span><span className="mono">{money(bonus.remaining)}</span></div>
               <div className="row-between small mb"><span className="muted">Cevrim kalan</span><span className="mono">{money(bonus.wageringRemaining)}</span></div>
               <div style={{ height: 7, background: "var(--bg-elev-3)", borderRadius: 4, overflow: "hidden" }}>

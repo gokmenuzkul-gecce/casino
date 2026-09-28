@@ -37,7 +37,7 @@ export const CATEGORY_META: Record<string, { icon: string; color: string; label:
   JACKPOT: { icon: "💰", color: "var(--cat-jackpot)", label: "Jackpot" },
   LOTTERY: { icon: "🎱", color: "var(--cat-lottery)", label: "Keno & Piyango" },
   FISHING: { icon: "🐟", color: "#0ea5e9", label: "Balikcilik" },
-  VIRTUAL: { icon: "🕹️", color: "#a78bfa", label: "Sanal" },
+  VIRTUAL: { icon: "🕹️", color: "#f82441", label: "Sanal" },
   SPORTS: { icon: "⚽", color: "var(--cat-sports)", label: "Spor Bahis" },
 };
 
@@ -97,7 +97,7 @@ export function GameCard({
     : game.isNew
       ? { text: "Yeni", cls: "badge-new" }
       : game.isFeatured
-        ? { text: "Populer", cls: "badge-hot" }
+        ? { text: "Popular", cls: "badge-hot" }
         : null;
 
   return (
@@ -127,7 +127,7 @@ export function GameCard({
         </button>
       )}
 
-      <div className="game-tile-art" style={{ ["--tile-color" as string]: game.themeColor ?? "#8b5cf6" }}>
+      <div className="game-tile-art" style={{ ["--tile-color" as string]: game.themeColor ?? "#e71d3a" }}>
         <img src={art.src} alt={game.name} loading="lazy" decoding="async" onError={art.onError} />
       </div>
       <div className="game-tile-name">{game.name}</div>
@@ -201,7 +201,7 @@ export function LiveTableCard({ game }: { game: GameCardData }) {
             <div className="live-card-meta-value">{game.maxBet ? money(game.maxBet) : "—"}</div>
           </div>
           <div style={{ marginLeft: "auto", alignSelf: "center" }}>
-            <span className="btn btn-primary btn-sm">Oyna</span>
+            <span className="btn btn-primary btn-sm">Play</span>
           </div>
         </div>
       </div>

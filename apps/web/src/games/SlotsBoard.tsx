@@ -87,7 +87,7 @@ export default function SlotsBoard({ slug, name }: { slug: string; name: string 
 
         {detail.lines && detail.lines.length > 0 && (
           <div className="mt">
-            <div className="small bold mb">Kazanan cizgiler</div>
+            <div className="small bold mb">Winning lines</div>
             {detail.lines.map((line) => (
               <div key={line.line} className="row-between small" style={{ padding: "3px 0" }}>
                 <span className="muted">Cizgi #{line.line}</span>
@@ -100,7 +100,7 @@ export default function SlotsBoard({ slug, name }: { slug: string; name: string 
       </div>
 
       <div className="card">
-        <div className="card-title">Bahis</div>
+        <div className="card-title">Bet</div>
         {bet.error && <div className="alert alert-error">{bet.error}</div>}
         <ResultBanner result={bet.last} />
 
@@ -121,7 +121,7 @@ export default function SlotsBoard({ slug, name }: { slug: string; name: string 
           </div>
 
           <div className="row-between small mb">
-            <span className="muted">Toplam bahis</span>
+            <span className="muted">Total bets</span>
             <span className="bold mono">{money(amount)}</span>
           </div>
 
@@ -132,7 +132,7 @@ export default function SlotsBoard({ slug, name }: { slug: string; name: string 
 
         <div className="divider" />
         <div className="row-between small">
-          <span className="muted">{demoMode ? "Demo bakiye" : "Cuzdan"}</span>
+          <span className="muted">{demoMode ? "Demo bakiye" : "Wallet"}</span>
           <span className="bold mono">{money(demoMode ? wallet?.demo : wallet?.real)}</span>
         </div>
       </div>

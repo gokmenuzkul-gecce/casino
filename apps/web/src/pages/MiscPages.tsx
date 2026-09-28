@@ -18,7 +18,7 @@ export function VipPage() {
     get<typeof data>("/api/vip").then(setData).catch(() => undefined);
   }, [user]);
 
-  if (!user) return <div className="page"><Alert kind="info">VIP programi icin giris yapmalisiniz.</Alert></div>;
+  if (!user) return <div className="page"><Alert kind="info">Log in to access the VIP program.</Alert></div>;
   if (!data) return <div className="page"><Spinner /></div>;
 
   return (
@@ -33,7 +33,7 @@ export function VipPage() {
               <div style={{ fontSize: 30, fontWeight: 900 }}>{data.current.tier}</div>
             </div>
             <div>
-              <div className="tiny faint">Toplam bahis</div>
+              <div className="tiny faint">Total bets</div>
               <div className="bold" style={{ fontSize: 20 }}>{money(data.current.lifetimeWagered)}</div>
             </div>
             <div>
@@ -102,7 +102,7 @@ export function LeaderboardPage() {
 
   return (
     <div className="page page-narrow">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Liderlik Tablosu</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>Leaderboard</h1>
 
       <div className="row mb" style={{ gap: 6, flexWrap: "wrap" }}>
         {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((key) => (
@@ -113,7 +113,7 @@ export function LeaderboardPage() {
         <div className="spacer" />
         {(["WAGERED", "WON"] as const).map((key) => (
           <button key={key} className={`btn btn-sm ${metric === key ? "btn-primary" : "btn-ghost"}`} onClick={() => setMetric(key)}>
-            {key === "WAGERED" ? "Bahis hacmi" : "Kazanc"}
+            {key === "WAGERED" ? "Bet volume" : "Winnings"}
           </button>
         ))}
       </div>
@@ -121,7 +121,7 @@ export function LeaderboardPage() {
       <div className="card">
         {loading ? <Spinner /> : leaders.length === 0 ? <Empty icon="🏆" title="Bu donemde kayit yok" /> : (
           <table className="table">
-            <thead><tr><th>#</th><th>Oyuncu</th><th>VIP</th><th className="right">{metric === "WAGERED" ? "Bahis" : "Kazanc"}</th></tr></thead>
+            <thead><tr><th>#</th><th>Player</th><th>VIP</th><th className="right">{metric === "WAGERED" ? "Bet" : "Winnings"}</th></tr></thead>
             <tbody>
               {leaders.map((leader) => (
                 <tr key={leader.rank}>
@@ -161,7 +161,7 @@ export function TournamentsPage() {
 
   return (
     <div className="page">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Turnuvalar</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>Tournaments</h1>
 
       {tournaments.length === 0 ? (
         <Empty icon="🎯" title="Su anda aktif turnuva yok" hint="Yakin zamanda yeni turnuvalar eklenecek" />
@@ -176,7 +176,7 @@ export function TournamentsPage() {
               <p className="small muted mb">{tournament.description}</p>
               <div className="grid grid-2" style={{ gap: 10 }}>
                 <div className="stat card-tight">
-                  <div className="stat-label">Odul havuzu</div>
+                  <div className="stat-label">Prize pool</div>
                   <div className="stat-value" style={{ fontSize: 19, color: "var(--gold)" }}>{money(tournament.prizePool, tournament.currency)}</div>
                 </div>
                 <div className="stat card-tight">
@@ -184,7 +184,7 @@ export function TournamentsPage() {
                   <div className="stat-value" style={{ fontSize: 19 }}>{tournament.metric}</div>
                 </div>
               </div>
-              <button className="btn btn-ghost btn-block mt" onClick={() => setSelected(tournament.slug)}>Liderlik Tablosu</button>
+              <button className="btn btn-ghost btn-block mt" onClick={() => setSelected(tournament.slug)}>Leaderboard</button>
             </div>
           ))}
         </div>
@@ -192,12 +192,12 @@ export function TournamentsPage() {
 
       {selected && detail && (
         <div className="card mt">
-          <div className="card-title">Siralama <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>Kapat</button></div>
+          <div className="card-title">Leaderboard <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>Close</button></div>
           {detail.leaderboard.length === 0 ? (
-            <Empty icon="📋" title="Henuz katilim yok" />
+            <Empty icon="📋" title="No entries yet" />
           ) : (
             <table className="table">
-              <thead><tr><th>#</th><th>Oyuncu</th><th className="right">Skor</th><th className="right">Odul</th></tr></thead>
+              <thead><tr><th>#</th><th>Player</th><th className="right">Skor</th><th className="right">Reward</th></tr></thead>
               <tbody>
                 {detail.leaderboard.map((entry) => (
                   <tr key={entry.rank}>
@@ -276,11 +276,11 @@ export function LivePage() {
         <div className="card">
           <Empty
             icon="🎥"
-            title="Canli masa listesi henuz bos"
-            hint="Agregator entegrasyonu yapilandirildiginda canli masalar burada otomatik gorunur."
+            title="Live table list is empty"
+            hint="Live tables appear here automatically once the aggregator integration is configured."
           />
           <div className="center mt">
-            <Link to="/games" className="btn btn-primary">Dahili Oyunlara Goz At</Link>
+            <Link to="/games" className="btn btn-primary">Explore In-House Games</Link>
           </div>
         </div>
       ) : (
@@ -333,13 +333,13 @@ export function FairnessPage() {
       const data = await get<typeof result>(`/api/games/bets/${target}/verify`);
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Dogrulama basarisiz");
+      setError(err instanceof Error ? err.message : "Verification failed");
     }
   };
 
   return (
     <div className="page page-narrow">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Provably Fair Dogrulama</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>Provably Fair Verification</h1>
 
       <div className="card mb">
         <p className="small muted">
@@ -350,10 +350,10 @@ export function FairnessPage() {
 
       <div className="card mb">
         <div className="field">
-          <label>Bahis ID veya referans</label>
+          <label>Bet ID or reference</label>
           <div className="input-row">
-            <input className="input" value={betId} onChange={(e) => setBetId(e.target.value)} placeholder="Bahis referansini girin" />
-            <button className="btn btn-primary" onClick={() => verify(betId)} disabled={!betId}>Dogrula</button>
+            <input className="input" value={betId} onChange={(e) => setBetId(e.target.value)} placeholder="Enter the bet reference" />
+            <button className="btn btn-primary" onClick={() => verify(betId)} disabled={!betId}>Verify</button>
           </div>
         </div>
 
@@ -362,12 +362,12 @@ export function FairnessPage() {
         {result && (
           <div className="col" style={{ gap: 10 }}>
             <div className={`alert ${result.verified ? "alert-success" : "alert-error"}`}>
-              {result.verified ? "✓ Sonuc dogrulandi — bahis degistirilmemis" : "✗ Dogrulama basarisiz"}
+              {result.verified ? "✓ Result verified — the bet was not altered" : "✗ Verification failed"}
             </div>
             <div className="grid grid-2" style={{ gap: 10 }}>
               <div className="stat card-tight">
                 <div className="stat-label">Tohum ozeti eslesmesi</div>
-                <div className="stat-value" style={{ fontSize: 18 }}>{result.hashMatches ? "✓ Evet" : "✗ Hayir"}</div>
+                <div className="stat-value" style={{ fontSize: 18 }}>{result.hashMatches ? "✓ Evet" : "✗ No"}</div>
               </div>
               <div className="stat card-tight">
                 <div className="stat-label">Katsayi karsilastirmasi</div>
@@ -388,13 +388,13 @@ export function FairnessPage() {
 
       {bets.length > 0 && (
         <div className="card">
-          <div className="card-title">Son Bahisleriniz</div>
+          <div className="card-title">Your Recent Bets</div>
           <div className="col" style={{ gap: 6 }}>
             {bets.map((bet) => (
               <div key={bet.id} className="row-between small" style={{ padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
                 <span className="mono truncate">{bet.reference}</span>
                 <span className="faint">{bet.game}</span>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setBetId(bet.id); verify(bet.id); }}>Dogrula</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setBetId(bet.id); verify(bet.id); }}>Verify</button>
               </div>
             ))}
           </div>

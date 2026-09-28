@@ -71,11 +71,11 @@ export function WalletPage() {
     try {
       const result = await post<{ status: string; reference: string; instructions?: string }>("/api/wallet/deposit", depositForm);
       setNotice(
-        result.instructions ?? `Yatirim ${result.status === "COMPLETED" ? "tamamlandi" : "isleme alindi"} (${result.reference})`,
+        result.instructions ?? `Yatirim ${result.status === "COMPLETED" ? "completed" : "has been received"} (${result.reference})`,
       );
       await refreshMe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Yatirim basarisiz");
+      setError(err instanceof Error ? err.message : "Deposit failed");
     } finally {
       setBusy(false);
     }
@@ -95,7 +95,7 @@ export function WalletPage() {
       );
       await refreshMe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cekim basarisiz");
+      setError(err instanceof Error ? err.message : "Withdrawal failed");
     } finally {
       setBusy(false);
     }
@@ -104,21 +104,21 @@ export function WalletPage() {
   const cancelWithdrawal = async (reference: string) => {
     try {
       await del(`/api/wallet/withdrawals/${reference}`);
-      setNotice("Cekim talebi iptal edildi, fonlar serbest birakildi.");
+      setNotice("Withdrawal request cancelled, funds released.");
       loadHistory();
       await refreshMe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Iptal edilemedi");
+      setError(err instanceof Error ? err.message : "Could not cancel");
     }
   };
 
-  if (!user) return <div className="page"><Alert kind="info">Cuzdan icin giris yapmalisiniz.</Alert></div>;
+  if (!user) return <div className="page"><Alert kind="info">You must log in to use the wallet.</Alert></div>;
 
   const currency = wallet?.currency ?? "TRY";
 
   return (
     <div className="page page-narrow">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Cuzdan</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>Wallet</h1>
 
       <div className="balance-hero mb">
         <div className="row-between" style={{ flexWrap: "wrap", gap: 14 }}>
@@ -127,8 +127,8 @@ export function WalletPage() {
             <div className="balance-amount">{money(wallet?.available, currency)}</div>
           </div>
           <div className="row" style={{ gap: 8 }}>
-            <button className="btn btn-primary" onClick={() => setTab("deposit")}>Para Yatir</button>
-            <button className="btn btn-ghost" onClick={() => setTab("withdraw")}>Para Cek</button>
+            <button className="btn btn-primary" onClick={() => setTab("deposit")}>Deposit</button>
+            <button className="btn btn-ghost" onClick={() => setTab("withdraw")}>Withdraw</button>
           </div>
         </div>
 
@@ -157,7 +157,7 @@ export function WalletPage() {
       <div className="row mb" style={{ gap: 6 }}>
         {(["deposit", "withdraw", "history"] as const).map((key) => (
           <button key={key} className={`btn btn-sm ${tab === key ? "btn-primary" : "btn-ghost"}`} onClick={() => setTab(key)}>
-            {key === "deposit" ? "Para Yatir" : key === "withdraw" ? "Para Cek" : "Gecmis"}
+            {key === "deposit" ? "Deposit" : key === "withdraw" ? "Withdraw" : "Gecmis"}
           </button>
         ))}
       </div>
@@ -183,11 +183,11 @@ export function WalletPage() {
               <input className="input" type="number" min="1" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} required />
             </div>
             <div className="field">
-              <label>Bonus kodu (opsiyonel)</label>
+              <label>Bonus code (optional)</label>
               <input className="input" value={depositForm.bonusCode} onChange={(e) => setDepositForm({ ...depositForm, bonusCode: e.target.value.toUpperCase() })} placeholder="WELCOME100" />
             </div>
             <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={busy}>
-              {busy ? "Isleniyor..." : "Yatirim Yap"}
+              {busy ? "Processing..." : "Deposit"}
             </button>
           </form>
         </div>
@@ -219,7 +219,7 @@ export function WalletPage() {
               <input className="input" value={withdrawForm.iban} onChange={(e) => setWithdrawForm({ ...withdrawForm, iban: e.target.value })} placeholder="TR00 0000 0000 0000 0000 0000 00" />
             </div>
             <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={busy}>
-              {busy ? "Isleniyor..." : "Cekim Talebi Olustur"}
+              {busy ? "Processing..." : "Create Withdrawal Request"}
             </button>
           </form>
         </div>
@@ -228,14 +228,14 @@ export function WalletPage() {
       {tab === "history" && (
         <div className="col">
           <div className="card">
-            <div className="card-title">Yatirimlar</div>
+            <div className="card-title">Deposits</div>
             {deposits.length === 0 ? (
-              <Empty icon="📥" title="Yatirim kaydi yok" />
+              <Empty icon="📥" title="No deposit records" />
             ) : (
               <div className="table-wrap">
                 <table className="table">
                   <thead>
-                    <tr><th>Referans</th><th>Yontem</th><th>Tutar</th><th>Durum</th><th>Tarih</th></tr>
+                    <tr><th>Referans</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr>
                   </thead>
                   <tbody>
                     {deposits.map((row) => (
@@ -254,14 +254,14 @@ export function WalletPage() {
           </div>
 
           <div className="card">
-            <div className="card-title">Cekimler</div>
+            <div className="card-title">Withdrawals</div>
             {withdrawals.length === 0 ? (
-              <Empty icon="📤" title="Cekim kaydi yok" />
+              <Empty icon="📤" title="No withdrawal records" />
             ) : (
               <div className="table-wrap">
                 <table className="table">
                   <thead>
-                    <tr><th>Referans</th><th>Yontem</th><th>Tutar</th><th>Durum</th><th></th></tr>
+                    <tr><th>Referans</th><th>Method</th><th>Amount</th><th>Status</th><th></th></tr>
                   </thead>
                   <tbody>
                     {withdrawals.map((row) => (
@@ -272,7 +272,7 @@ export function WalletPage() {
                         <td><Pill kind={statusKind(row.status)}>{row.status}</Pill></td>
                         <td>
                           {row.status === "PENDING" && (
-                            <button className="btn btn-ghost btn-sm" onClick={() => cancelWithdrawal(row.reference)}>Iptal</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => cancelWithdrawal(row.reference)}>Cancel</button>
                           )}
                         </td>
                       </tr>
@@ -314,7 +314,7 @@ export function PromotionsPage() {
       setNotice(`Bonus alindi: ${result.amount} TRY (cevrim: ${result.wageringRequired} TRY)`);
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bonus alinamadi");
+      setError(err instanceof Error ? err.message : "Could not claim bonus");
     } finally {
       setBusy(null);
     }
@@ -322,13 +322,13 @@ export function PromotionsPage() {
 
   return (
     <div className="page">
-      <h1 className="section-title" style={{ marginTop: 0 }}>Bonuslar ve Promosyonlar</h1>
+      <h1 className="section-title" style={{ marginTop: 0 }}>Bonuses & Promotions</h1>
       {error && <Alert kind="error">{error}</Alert>}
       {notice && <Alert kind="success">{notice}</Alert>}
 
       {bonuses.length === 0 ? (
         <div className="card">
-          <Empty icon="🎁" title="Su anda aktif bonus yok" hint="Yeni kampanyalar eklendiginde burada gorunecek." />
+          <Empty icon="🎁" title="Su anda aktif bonus yok" hint="New promotions will appear here once available." />
         </div>
       ) : (
         <div className="grid grid-2">
@@ -357,7 +357,7 @@ export function PromotionsPage() {
                 onClick={() => claim(bonus.code)}
                 disabled={!user || bonus.claimed || busy === bonus.code}
               >
-                {bonus.claimed ? "Zaten Alindi" : busy === bonus.code ? "Aliniyor..." : user ? "Bonusu Al" : "Giris Yapin"}
+                {bonus.claimed ? "Zaten Alindi" : busy === bonus.code ? "Aliniyor..." : user ? "Claim Bonus" : "Login"}
               </button>
             </div>
           ))}

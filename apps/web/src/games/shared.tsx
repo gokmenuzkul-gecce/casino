@@ -52,7 +52,7 @@ export function useBet(onSettled?: (result: BetResponse) => void): BetState {
       await refreshMe().catch(() => undefined);
       return result;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Bahis basarisiz";
+      const message = err instanceof Error ? err.message : "Bet failed";
       setError(message);
       return null;
     } finally {
@@ -68,7 +68,7 @@ export function StakeControl({
   amount,
   setAmount,
   disabled,
-  label = "Bahis tutari",
+  label = "Bet amount",
 }: {
   amount: string;
   setAmount: (value: string) => void;
@@ -118,7 +118,7 @@ export function ResultBanner({ result }: { result: BetResponse | null }) {
     <div className={`alert ${pushed ? "alert-info" : won ? "alert-success" : "alert-error"}`}>
       <div className="row-between">
         <span className="bold">
-          {pushed ? "Berabere" : won ? "Kazandiniz!" : "Kaybettiniz"}
+          {pushed ? "Berabere" : won ? "You won!" : "You lost"}
         </span>
         <span className="mono">
           x{result.multiplier} · {won ? "+" : ""}{result.profit}

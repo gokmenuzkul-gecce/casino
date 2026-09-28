@@ -53,13 +53,13 @@ export default function LimboBoard({ slug, name }: { slug: string; name: string 
         </div>
 
         <div className="stat card-tight">
-          <div className="stat-label">Kazanma sansi</div>
+          <div className="stat-label">Win chance</div>
           <div className="stat-value" style={{ fontSize: 20 }}>%{(99 / target).toFixed(4)}</div>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-title">Bahis</div>
+        <div className="card-title">Bet</div>
         {bet.error && <div className="alert alert-error">{bet.error}</div>}
         <ResultBanner result={bet.last} />
 
@@ -72,7 +72,7 @@ export default function LimboBoard({ slug, name }: { slug: string; name: string 
 
         <div className="divider" />
         <div className="row-between small">
-          <span className="muted">{demoMode ? "Demo bakiye" : "Cuzdan"}</span>
+          <span className="muted">{demoMode ? "Demo bakiye" : "Wallet"}</span>
           <span className="bold mono">{money(demoMode ? wallet?.demo : wallet?.real)}</span>
         </div>
       </div>

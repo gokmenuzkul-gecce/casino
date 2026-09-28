@@ -84,57 +84,57 @@ function Footer() {
             Aurora
           </div>
           <p className="small muted" style={{ maxWidth: 320, lineHeight: 1.6 }}>
-            Provably fair oyun motoru uzerine kurulu, lisanslanabilir online casino platformu. Her tur bagimsiz olarak
-            dogrulanabilir.
+            Online casino platform built on a provably fair game engine. Every round can be verified independently.
           </p>
           <div className="footer-badges" style={{ marginTop: 16 }}>
             <span className="footer-badge">18+</span>
             <span className="footer-badge">Provably Fair</span>
-            <span className="footer-badge">Sorumlu Oyun</span>
+            <span className="footer-badge">Responsible Gaming</span>
           </div>
         </div>
 
         <div>
-          <div className="footer-col-title">Oyunlar</div>
-          <Link to="/games" className="footer-link">Tum Oyunlar</Link>
-          <Link to="/live" className="footer-link">Canli Casino</Link>
-          <Link to="/games?category=SLOTS" className="footer-link">Slotlar</Link>
-          <Link to="/games?category=TABLE" className="footer-link">Masa Oyunlari</Link>
-          <Link to="/crash" className="footer-link">Crash</Link>
+          <div className="footer-col-title">Casino</div>
+          <Link to="/games" className="footer-link">All Games</Link>
+          <Link to="/live" className="footer-link">Live Casino</Link>
+          <Link to="/games?category=SLOTS" className="footer-link">Slots</Link>
+          <Link to="/games?category=TABLE" className="footer-link">Table Games</Link>
+          <Link to="/crash" className="footer-link">Instant</Link>
         </div>
 
         <div>
-          <div className="footer-col-title">Kampanyalar</div>
-          <Link to="/promotions" className="footer-link">Bonuslar</Link>
-          <Link to="/tournaments" className="footer-link">Turnuvalar</Link>
-          <Link to="/vip" className="footer-link">VIP Programi</Link>
-          <Link to="/leaderboard" className="footer-link">Liderlik Tablosu</Link>
+          <div className="footer-col-title">Activities</div>
+          <Link to="/promotions" className="footer-link">Promotions</Link>
+          <Link to="/tournaments" className="footer-link">Tournaments</Link>
+          <Link to="/leaderboard" className="footer-link">Hall of Fame</Link>
+          <Link to="/leaderboard" className="footer-link">High Rollers</Link>
         </div>
 
         <div>
-          <div className="footer-col-title">Hesabim</div>
-          <Link to="/account" className="footer-link">Profil</Link>
-          <Link to="/wallet" className="footer-link">Cuzdan</Link>
-          <Link to="/history" className="footer-link">Islem Gecmisi</Link>
-          <Link to="/kyc" className="footer-link">Kimlik Dogrulama</Link>
+          <div className="footer-col-title">Legal</div>
+          <Link to="/cms/sorumlu-oyun" className="footer-link">Responsible Gaming</Link>
+          <Link to="/cms/cerezler" className="footer-link">Cookie Files</Link>
+          <Link to="/cms/guvenlik" className="footer-link">Security</Link>
+          <Link to="/cms/hakkimizda" className="footer-link">About Us</Link>
+          <Link to="/fairness" className="footer-link">Affiliate</Link>
         </div>
 
         <div>
-          <div className="footer-col-title">Yasal</div>
-          <Link to="/cms/kullanim-sartlari" className="footer-link">Kullanim Sartlari</Link>
-          <Link to="/cms/gizlilik" className="footer-link">Gizlilik Politikasi</Link>
-          <Link to="/cms/sorumlu-oyun" className="footer-link">Sorumlu Oyun</Link>
-          <Link to="/fairness" className="footer-link">Provably Fair</Link>
+          <div className="footer-col-title">Contact us</div>
+          <a href="mailto:support@aurora.com" className="footer-link">support@aurora.com</a>
+          <a href="mailto:marketing@aurora.com" className="footer-link">marketing@aurora.com</a>
+          <a href="mailto:cooperation@aurora.com" className="footer-link">cooperation@aurora.com</a>
         </div>
       </div>
 
       <div className="footer-bottom">
         <span className="tiny faint">
-          © {new Date().getFullYear()} Aurora. Tum haklari saklidir. 18+ · Kumar bagimlilik yapabilir, sorumlu oynayin.
+          Notice: This is gambling-related advertising. Gambling will not help you fix financial issues. Always read
+          the terms and conditions and gamble responsibly.
         </span>
         <div className="footer-badges">
           <span className="footer-badge">Aurora Originals</span>
-          <span className="footer-badge">SSL Korumali</span>
+          <span className="footer-badge">SSL Secured</span>
         </div>
       </div>
     </footer>

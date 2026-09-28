@@ -69,7 +69,7 @@ export function Modal({
             <div className="modal-title">{title}</div>
             {subtitle && <div className="modal-sub">{subtitle}</div>}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Kapat">
+          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
             <IconClose size={16} />
           </button>
         </div>

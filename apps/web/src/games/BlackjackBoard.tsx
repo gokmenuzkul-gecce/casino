@@ -101,7 +101,7 @@ export default function BlackjackBoard({ slug, name }: { slug: string; name: str
       </div>
 
       <div className="card">
-        <div className="card-title">Bahis</div>
+        <div className="card-title">Bet</div>
         {bet.error && <div className="alert alert-error">{bet.error}</div>}
         <ResultBanner result={bet.last} />
 
@@ -117,7 +117,7 @@ export default function BlackjackBoard({ slug, name }: { slug: string; name: str
 
         <div className="divider" />
         <div className="row-between small">
-          <span className="muted">{demoMode ? "Demo bakiye" : "Cuzdan"}</span>
+          <span className="muted">{demoMode ? "Demo bakiye" : "Wallet"}</span>
           <span className="bold mono">{money(demoMode ? wallet?.demo : wallet?.real)}</span>
         </div>
       </div>
@@ -134,7 +134,7 @@ function PlayingCard({ card, hidden }: { card: CardView; hidden?: boolean }) {
           width: 52,
           height: 74,
           borderRadius: 8,
-          background: "repeating-linear-gradient(45deg, #4c1d95, #4c1d95 6px, #6d28d9 6px, #6d28d9 12px)",
+          background: "repeating-linear-gradient(45deg, #7a0740, #7a0740 6px, #a20c25 6px, #a20c25 12px)",
           border: "2px solid rgba(255,255,255,0.2)",
         }}
       />

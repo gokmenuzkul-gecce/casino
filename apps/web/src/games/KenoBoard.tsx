@@ -81,7 +81,7 @@ export default function KenoBoard({ slug, name }: { slug: string; name: string }
       </div>
 
       <div className="card">
-        <div className="card-title">Bahis</div>
+        <div className="card-title">Bet</div>
         {bet.error && <div className="alert alert-error">{bet.error}</div>}
         <ResultBanner result={bet.last} />
 
@@ -106,7 +106,7 @@ export default function KenoBoard({ slug, name }: { slug: string; name: string }
 
           <div className="row" style={{ gap: 8 }}>
             <button className="btn btn-primary btn-lg" style={{ flex: 1 }} type="submit" disabled={bet.placing || picks.length === 0}>
-              {bet.placing ? "Cekiliyor..." : "🎱 Cekilis Yap"}
+              {bet.placing ? "Drawing..." : "🎱 Draw"}
             </button>
             <button className="btn btn-ghost btn-lg" type="button" onClick={quickPick} disabled={bet.placing}>
               🎲 Rastgele
@@ -116,7 +116,7 @@ export default function KenoBoard({ slug, name }: { slug: string; name: string }
 
         <div className="divider" />
         <div className="row-between small">
-          <span className="muted">{demoMode ? "Demo bakiye" : "Cuzdan"}</span>
+          <span className="muted">{demoMode ? "Demo bakiye" : "Wallet"}</span>
           <span className="bold mono">{money(demoMode ? wallet?.demo : wallet?.real)}</span>
         </div>
       </div>

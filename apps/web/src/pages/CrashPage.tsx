@@ -98,7 +98,7 @@ export function CrashPage() {
     const onBetPlaced = (payload: { bet: BetView }) => setBets((prev) => [...prev, payload.bet]);
 
     const onCashed = (payload: { betId: string; userId: string; multiplier: string; payout: string }) => {
-      setCashes((prev) => [{ id: payload.betId, username: "Oyuncu", multiplier: payload.multiplier, payout: payload.payout }, ...prev.slice(0, 24)]);
+      setCashes((prev) => [{ id: payload.betId, username: "Player", multiplier: payload.multiplier, payout: payload.payout }, ...prev.slice(0, 24)]);
       setBets((prev) => prev.map((b) => (b.betId === payload.betId ? { ...b, cashedOutAt: payload.multiplier, payout: payload.payout } : b)));
     };
 
@@ -151,7 +151,7 @@ export function CrashPage() {
   const placeBet = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!user) return setError("Bahis icin giris yapmalisiniz");
+    if (!user) return setError("You must log in to place a bet");
 
     socket.emit(
       "crash:bet",
@@ -161,7 +161,7 @@ export function CrashPage() {
         demo: demoMode,
       },
       (ack: { ok: boolean; betId?: string; error?: string }) => {
-        if (!ack.ok) return setError(ack.error ?? "Bahis yerlestirilemedi");
+        if (!ack.ok) return setError(ack.error ?? "Could not place the bet");
         setMyBet({ betId: ack.betId!, amount });
         setNotice(`Bahis yerlestirildi: ${money(amount)}`);
       },
@@ -171,13 +171,13 @@ export function CrashPage() {
   const cashOut = () => {
     if (!myBet) return;
     socket.emit("crash:cashout", { betId: myBet.betId }, (ack: { ok: boolean; multiplier?: string; payout?: string; error?: string }) => {
-      if (!ack.ok) return setError(ack.error ?? "Nakde cekilemedi");
+      if (!ack.ok) return setError(ack.error ?? "Could not cash out");
       setNotice(`Nakde cekildi: x${ack.multiplier} → ${money(ack.payout ?? "0")}`);
       setMyBet(null);
     });
   };
 
-  const statusLabel = status === "OPEN" ? "Bahisler Kabul Ediliyor" : status === "ACTIVE" ? "Ucus Sürüyor" : "Tur Bitti";
+  const statusLabel = status === "OPEN" ? "Bets are open" : status === "ACTIVE" ? "Flight in progress" : "Tur Bitti";
   const statusClass = status === "OPEN" ? "waiting" : status === "ACTIVE" ? "flying" : "crashed";
 
   const balanceShown = demoMode ? wallet?.demo : wallet?.real;
@@ -191,7 +191,7 @@ export function CrashPage() {
         </div>
         <div className="row" style={{ gap: 8 }}>
           {demoMode && <Pill kind="warning">DEMO MODU</Pill>}
-          <Link to="/fairness" className="btn btn-ghost btn-sm">🔐 Dogrulama</Link>
+          <Link to="/fairness" className="btn btn-ghost btn-sm">🔐 Verification</Link>
         </div>
       </div>
 
@@ -243,7 +243,7 @@ export function CrashPage() {
           </div>
 
           <div className="card">
-            <div className="card-title">Canli Bahisler <span className="faint small">{bets.length} oyuncu</span></div>
+            <div className="card-title">Live Bets <span className="faint small">{bets.length} oyuncu</span></div>
             {bets.length === 0 ? (
               <div className="muted small center" style={{ padding: 16 }}>Bu turda henuz bahis yok</div>
             ) : (
@@ -268,7 +268,7 @@ export function CrashPage() {
         <div className="col" style={{ gap: 16 }}>
           <div className="card">
             <div className="row-between mb">
-              <span className="small muted">Bakiye</span>
+              <span className="small muted">Balance</span>
               <span className="bold" style={{ fontVariantNumeric: "tabular-nums" }}>{money(balanceShown, wallet?.currency ?? "TRY")}</span>
             </div>
 
@@ -279,7 +279,7 @@ export function CrashPage() {
             ) : (
               <form onSubmit={placeBet}>
                 <div className="field">
-                  <label>Bahis tutari</label>
+                  <label>Bet amount</label>
                   <input
                     className="input"
                     type="number"
@@ -319,9 +319,9 @@ export function CrashPage() {
                 </div>
 
                 <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={status !== "OPEN" || !user}>
-                  {status === "OPEN" ? "Bahis Yerlestir" : "Sonraki turu bekleyin"}
+                  {status === "OPEN" ? "Place Bet" : "Sonraki turu bekleyin"}
                 </button>
-                {!user && <Link to="/" className="btn btn-ghost btn-sm btn-block mt">Giris Yap</Link>}
+                {!user && <Link to="/" className="btn btn-ghost btn-sm btn-block mt">Login</Link>}
               </form>
             )}
 
@@ -329,19 +329,19 @@ export function CrashPage() {
             <div className="tiny faint">
               {demoMode
                 ? "Demo modunda oynuyorsunuz. Gercek para icin ustteki DEMO dugmesine basin."
-                : "Gercek bakiyeyle oynuyorsunuz. Bahisler aninda cuzdaninizdan dusulur."}
+                : "You are playing with real balance. Bets are deducted from your wallet instantly."}
             </div>
           </div>
 
           <div className="card card-tight">
-            <div className="card-title" style={{ marginBottom: 8 }}>💥 Son Nakde Cekmeler</div>
+            <div className="card-title" style={{ marginBottom: 8 }}>💥 Latest Cashouts</div>
             {cashes.length === 0 ? (
-              <div className="muted small center" style={{ padding: 12 }}>Henuz yok</div>
+              <div className="muted small center" style={{ padding: 12 }}>None yet</div>
             ) : (
               <div className="col" style={{ gap: 5 }}>
                 {cashes.slice(0, 10).map((entry) => (
                   <div className="row-between small" key={entry.id}>
-                    <span className="faint">Oyuncu</span>
+                    <span className="faint">Player</span>
                     <span className="bold" style={{ color: "var(--success)" }}>x{entry.multiplier}</span>
                     <span className="mono">{money(entry.payout)}</span>
                   </div>

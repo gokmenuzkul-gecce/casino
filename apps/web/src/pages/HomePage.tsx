@@ -50,7 +50,7 @@ export function HomePage() {
         setData(result);
         setOnline(result.stats.onlinePlayers);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Yuklenemedi"));
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not load"));
 
     // Live tables, providers and per-category counts are separate catalogues.
     get<{ games: GameCardData[] }>("/api/games?category=LIVE_CASINO&pageSize=8")
@@ -144,7 +144,7 @@ export function HomePage() {
           <h1 className="hero-title">
             Her tur dogrulanabilir.
             <br />
-            <span className="grad">Seffaf kazanc.</span>
+            <span className="grad">Transparent winnings.</span>
           </h1>
           <p className="hero-sub">
             Sunucu tohumunun ozeti tur baslamadan yayinlanir; sonucu kendi cihazinizdan bagimsiz olarak dogrulayabilirsiniz.
@@ -175,22 +175,22 @@ export function HomePage() {
 
           <div className="hero-stats">
             <div>
-              <div className="hero-stat-label">Cevrimici</div>
+              <div className="hero-stat-label">Online</div>
               <div className="hero-stat-value">
                 <span className="live-dot" style={{ display: "inline-block", marginRight: 7 }} />
                 {online.toLocaleString("tr-TR")}
               </div>
             </div>
             <div>
-              <div className="hero-stat-label">Bugun oynanan</div>
+              <div className="hero-stat-label">Played today</div>
               <div className="hero-stat-value">{data.stats.totalBetsToday.toLocaleString("tr-TR")}</div>
             </div>
             <div>
-              <div className="hero-stat-label">Bugun dagitilan</div>
+              <div className="hero-stat-label">Paid out today</div>
               <div className="hero-stat-value" style={{ color: "var(--success)" }}>{money(data.stats.totalPaidToday)}</div>
             </div>
             <div>
-              <div className="hero-stat-label">Oyun</div>
+              <div className="hero-stat-label">Game</div>
               <div className="hero-stat-value">{data.featured.length + data.newest.length + data.popular.length}</div>
             </div>
           </div>
@@ -230,8 +230,8 @@ export function HomePage() {
       )}
 
       {/* ── shelves ────────────────────────────────────────── */}
-      <Shelf title="One Cikanlar" icon={<IconStar size={17} filled />} games={data.featured} favorites={favorites} onToggle={toggleFavorite} />
-      <Shelf title="Yeni Eklenenler" icon={<IconSparkle size={17} />} games={data.newest} favorites={favorites} onToggle={toggleFavorite} />
+      <Shelf title="Featured" icon={<IconStar size={17} filled />} games={data.featured} favorites={favorites} onToggle={toggleFavorite} />
+      <Shelf title="New Games" icon={<IconSparkle size={17} />} games={data.newest} favorites={favorites} onToggle={toggleFavorite} />
 
       {/* ── live casino ────────────────────────────────────── */}
       <div className="carousel-head">
@@ -249,8 +249,8 @@ export function HomePage() {
         <div className="card">
           <Empty
             icon="🎥"
-            title="Canli masalar henuz bagli degil"
-            hint="Oyun agregatoru API bilgileri girildiginde gercek krupiyeli masalar bu bolumde otomatik listelenir."
+            title="Live tables are not connected yet"
+            hint="Real dealer tables appear here automatically once the aggregator API credentials are entered."
           />
         </div>
       ) : (
@@ -262,7 +262,7 @@ export function HomePage() {
       )}
 
       {/* ── popular shelf ──────────────────────────────────── */}
-      <Shelf title="En Cok Oynanan" icon={<IconFlame size={17} />} games={data.popular} favorites={favorites} onToggle={toggleFavorite} />
+      <Shelf title="Most Played" icon={<IconFlame size={17} />} games={data.popular} favorites={favorites} onToggle={toggleFavorite} />
 
       {/* ── promotions ─────────────────────────────────────── */}
       {data.bonuses.length > 0 && (
@@ -301,7 +301,7 @@ export function HomePage() {
       {/* ── providers ──────────────────────────────────────── */}
       {providers.length > 0 && (
         <>
-          <div className="section-title">Oyun Saglayicilari</div>
+          <div className="section-title">Game Providers</div>
           <div className="provider-strip">
             {providers.map((provider) => (
               <Link key={provider.slug} to={`/games?provider=${provider.slug}`} className="provider-logo">
@@ -323,7 +323,7 @@ export function HomePage() {
             </span>
           </div>
           {data.bigWins.length === 0 ? (
-            <Empty icon="🏆" title="Henuz kayit yok" hint="Ilk buyuk kazanci siz yapin!" />
+            <Empty icon="🏆" title="No records yet" hint="Be the first to hit a big win!" />
           ) : (
             <div className="col" style={{ gap: 0 }}>
               {data.bigWins.slice(0, 8).map((win) => (
@@ -343,7 +343,7 @@ export function HomePage() {
         </div>
 
         <div className="card">
-          <div className="card-title">Kategoriler</div>
+          <div className="card-title">Categories</div>
           <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(132px, 1fr))", gap: 10 }}>
             {populatedCategories.map((category) => {
               const meta = categoryMeta(category.slug);

@@ -62,7 +62,7 @@ export function AuthModal({
         onClose();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Islem basarisiz");
+      setError(err instanceof Error ? err.message : "Operation failed");
     }
   };
 
@@ -70,8 +70,8 @@ export function AuthModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={mode === "login" ? "Giris Yap" : "Kayit Ol"}
-      subtitle={mode === "login" ? "Hesabiniza giris yapin" : "Saniyeler icinde hesap olusturun"}
+      title={mode === "login" ? "Login" : "Register"}
+      subtitle={mode === "login" ? "Log in to your account" : "Saniyeler icinde hesap olusturun"}
     >
       {error && <Alert kind={needsTotp ? "info" : "error"}>{error}</Alert>}
 
@@ -83,7 +83,7 @@ export function AuthModal({
               <input className="input" value={form.identifier} onChange={set("identifier")} autoComplete="username" required />
             </div>
             <div className="field">
-              <label>Sifre</label>
+              <label>Password</label>
               <input className="input" type="password" value={form.password} onChange={set("password")} autoComplete="current-password" required />
             </div>
             {needsTotp && (
@@ -100,11 +100,11 @@ export function AuthModal({
               <input className="input" type="email" value={form.email} onChange={set("email")} required />
             </div>
             <div className="field">
-              <label>Kullanici adi</label>
+              <label>Username</label>
               <input className="input" value={form.username} onChange={set("username")} required minLength={3} />
             </div>
             <div className="field">
-              <label>Sifre</label>
+              <label>Password</label>
               <input className="input" type="password" value={form.password} onChange={set("password")} required minLength={8} />
               <span className="tiny faint">En az 8 karakter, buyuk harf ve rakam icermeli.</span>
             </div>
@@ -120,7 +120,7 @@ export function AuthModal({
         )}
 
         <button className="btn btn-primary btn-block btn-lg mt" type="submit" disabled={loading}>
-          {loading ? "Isleniyor..." : mode === "login" ? "Giris Yap" : "Kayit Ol"}
+          {loading ? "Processing..." : mode === "login" ? "Login" : "Register"}
         </button>
       </form>
 

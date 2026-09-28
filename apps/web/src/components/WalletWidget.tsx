@@ -52,7 +52,7 @@ export function WalletWidget({ compact }: { compact?: boolean }) {
         {money(shown, currency)}
       </span>
       {bonus > 0 && !demoMode && (
-        <span className="pill pill-success" style={{ fontVariantNumeric: "tabular-nums" }} title="Bonus bakiyesi">
+        <span className="pill pill-success" style={{ fontVariantNumeric: "tabular-nums" }} title="Bonus balance">
           <IconGift size={12} /> {money(wallet?.bonus, currency)}
         </span>
       )}

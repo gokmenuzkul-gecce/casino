@@ -28,9 +28,9 @@ export function LogoMark({ size = 21 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
       <defs>
         <linearGradient id="logoAu" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#f0c674" />
-          <stop offset="0.55" stopColor="#d6a84f" />
-          <stop offset="1" stopColor="#8a6a28" />
+          <stop offset="0" stopColor="#fb4954" />
+          <stop offset="0.55" stopColor="#e71d3a" />
+          <stop offset="1" stopColor="#a20c25" />
         </linearGradient>
       </defs>
       <path d="M32 10 L50 50 L40 50 L32 31 L24 50 L14 50 Z" fill="url(#logoAu)" />
@@ -52,28 +52,27 @@ export function Logo({ to = "/" }: { to?: string }) {
 }
 
 const PRIMARY_NAV = [
-  { to: "/", label: "Lobi", icon: IconHome, end: true },
-  { to: "/games", label: "Oyunlar", icon: IconGrid },
-  { to: "/live", label: "Canli Casino", icon: IconLive },
-  { to: "/crash", label: "Crash", icon: IconCoins },
-  { to: "/promotions", label: "Bonuslar", icon: IconGift },
-  { to: "/tournaments", label: "Turnuvalar", icon: IconTrophy },
-  { to: "/vip", label: "VIP", icon: IconShield },
+  { to: "/games", label: "Casino", icon: IconGrid },
+  { to: "/live", label: "Live Casino", icon: IconLive },
+  { to: "/crash", label: "Instant", icon: IconCoins },
+  { to: "/promotions", label: "Promotions", icon: IconGift },
 ];
 
 const DRAWER_EXTRA = [
-  { to: "/leaderboard", label: "Siralama", icon: IconTrophy },
+  { to: "/", label: "Home", icon: IconHome, end: true },
+  { to: "/tournaments", label: "Tournaments", icon: IconTrophy },
+  { to: "/vip", label: "VIP", icon: IconShield },
+  { to: "/leaderboard", label: "Leaderboard", icon: IconTrophy },
   { to: "/fairness", label: "Provably Fair", icon: IconLock },
-  { to: "/history", label: "Islem Gecmisi", icon: IconDoc },
-  { to: "/kyc", label: "Kimlik Dogrulama", icon: IconShield },
+  { to: "/history", label: "History", icon: IconDoc },
 ];
 
 const BOTTOM_NAV = [
-  { to: "/", label: "Lobi", icon: IconHome, end: true },
-  { to: "/games", label: "Oyunlar", icon: IconGrid },
-  { to: "/live", label: "Canli", icon: IconLive },
-  { to: "/wallet", label: "Cuzdan", icon: IconWallet },
-  { to: "/account", label: "Hesabim", icon: IconUser },
+  { to: "/", label: "Home", icon: IconHome, end: true },
+  { to: "/games", label: "Casino", icon: IconGrid },
+  { to: "/live", label: "Live", icon: IconLive },
+  { to: "/wallet", label: "Wallet", icon: IconWallet },
+  { to: "/account", label: "Account", icon: IconUser },
 ];
 
 export function Header() {
@@ -124,12 +123,12 @@ export function Header() {
 
           <Logo />
 
-          <nav className="nav" aria-label="Ana menu">
+          <nav className="nav" aria-label="Main menu">
             {PRIMARY_NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.end}
+                end={"end" in item ? Boolean(item.end) : undefined}
                 className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
               >
                 {item.label}
@@ -143,10 +142,10 @@ export function Header() {
             </span>
             <input
               className="header-search-input"
-              placeholder="Oyun ara..."
+              placeholder="Search games..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              aria-label="Oyun ara"
+              aria-label="Search games"
             />
           </form>
 
@@ -158,18 +157,18 @@ export function Header() {
                   onClick={() => setDemoMode(!demoMode)}
                   title="Demo ve gercek bakiye arasinda gecis"
                 >
-                  {demoMode ? "DEMO" : "GERCEK"}
+                  {demoMode ? "DEMO" : "REAL"}
                 </button>
 
                 <WalletWidget />
 
-                <Link to="/account" className="header-icon-btn" aria-label="Bildirimler">
+                <Link to="/account" className="header-icon-btn" aria-label="Notifications">
                   <IconBell size={18} />
                   {unreadCount > 0 && <span className="header-icon-dot">{unreadCount > 9 ? "9+" : unreadCount}</span>}
                 </Link>
 
                 <div style={{ position: "relative" }}>
-                  <button className="header-icon-btn" onClick={() => setMenuOpen((v) => !v)} aria-label="Hesap menusu" aria-expanded={menuOpen}>
+                  <button className="header-icon-btn" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" aria-expanded={menuOpen}>
                     <IconUser size={18} />
                   </button>
                   {menuOpen && (
@@ -184,9 +183,9 @@ export function Header() {
                         </div>
                         <div className="divider" style={{ margin: "0 0 6px" }} />
                         {[
-                          { to: "/account", label: "Hesabim", icon: IconUser },
-                          { to: "/wallet", label: "Cuzdan", icon: IconWallet },
-                          { to: "/history", label: "Islem Gecmisi", icon: IconDoc },
+                          { to: "/account", label: "Account", icon: IconUser },
+                          { to: "/wallet", label: "Wallet", icon: IconWallet },
+                          { to: "/history", label: "History", icon: IconDoc },
                           { to: "/fairness", label: "Provably Fair", icon: IconLock },
                           ...(staff ? [{ to: "/admin", label: "Admin Panel", icon: IconShield }] : []),
                         ].map((item) => (
@@ -205,7 +204,7 @@ export function Header() {
                             navigate("/");
                           }}
                         >
-                          Cikis Yap
+                  Log out
                         </button>
                       </div>
                     </>
@@ -215,10 +214,10 @@ export function Header() {
             ) : (
               <>
                 <button className="btn btn-ghost btn-sm" onClick={() => openAuth("login")}>
-                  Giris
+                  Login
                 </button>
                 <button className="btn btn-primary btn-sm" onClick={() => openAuth("register")}>
-                  Kayit Ol
+                  Register
                 </button>
               </>
             )}
@@ -232,7 +231,7 @@ export function Header() {
           <aside className="drawer" aria-label="Mobil menu">
             <div className="row-between" style={{ marginBottom: 14 }}>
               <Logo />
-              <button className="btn btn-ghost btn-sm" onClick={() => setDrawerOpen(false)} aria-label="Kapat">
+              <button className="btn btn-ghost btn-sm" onClick={() => setDrawerOpen(false)} aria-label="Close">
                 <IconClose size={16} />
               </button>
             </div>
@@ -241,7 +240,7 @@ export function Header() {
               <div className="card card-tight" style={{ marginBottom: 10 }}>
                 <div className="row-between">
                   <div>
-                    <div className="tiny faint">Bakiye</div>
+                    <div className="tiny faint">Balance</div>
                     <div className="bold" style={{ fontSize: 17 }}>
                       <WalletWidget compact />
                     </div>
@@ -250,7 +249,7 @@ export function Header() {
                     className={`btn btn-sm ${demoMode ? "btn-gold" : "btn-ghost"}`}
                     onClick={() => setDemoMode(!demoMode)}
                   >
-                    {demoMode ? "DEMO" : "GERCEK"}
+                    {demoMode ? "DEMO" : "REAL"}
                   </button>
                 </div>
               </div>
@@ -279,7 +278,7 @@ export function Header() {
                   navigate("/");
                 }}
               >
-                Cikis Yap
+                  Log out
               </button>
             ) : (
               <div className="col" style={{ gap: 8 }}>
@@ -290,7 +289,7 @@ export function Header() {
                     openAuth("login");
                   }}
                 >
-                  Giris Yap
+                    Login
                 </button>
                 <button
                   className="btn btn-primary btn-block"
@@ -299,7 +298,7 @@ export function Header() {
                     openAuth("register");
                   }}
                 >
-                  Kayit Ol
+                  Register
                 </button>
               </div>
             )}

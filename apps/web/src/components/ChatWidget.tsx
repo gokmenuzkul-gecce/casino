@@ -46,7 +46,7 @@ export function ChatWidget() {
     setError(null);
     if (!draft.trim()) return;
     socket.emit("chat:send", { channel: "lobby", message: draft }, (ack: { ok: boolean; error?: string }) => {
-      if (!ack.ok) setError(ack.error ?? "Gonderilemedi");
+      if (!ack.ok) setError(ack.error ?? "Could not send");
       else setDraft("");
     });
   };
@@ -74,7 +74,7 @@ export function ChatWidget() {
       </div>
 
       <div className="chat-messages">
-        {messages.length === 0 && <div className="small faint center">Henuz mesaj yok. Ilk mesaji siz yazin!</div>}
+        {messages.length === 0 && <div className="small faint center">No messages yet. Be the first to write!</div>}
         {messages.map((message) => (
           <div className="chat-msg" key={message.id}>
             {message.vipTier && <span className="pill pill-vip" style={{ fontSize: 9, padding: "1px 6px", marginRight: 4 }}>{message.vipTier}</span>}
@@ -93,11 +93,11 @@ export function ChatWidget() {
           className="input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder={user ? "Mesaj yazin..." : "Sohbet icin giris yapin"}
+          placeholder={user ? "Write a message..." : "Log in to chat"}
           disabled={!user}
           maxLength={300}
         />
-        <button className="btn btn-primary" type="submit" disabled={!user || !draft.trim()}>Gonder</button>
+        <button className="btn btn-primary" type="submit" disabled={!user || !draft.trim()}>Send</button>
       </form>
     </div>
   );
