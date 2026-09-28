@@ -5,14 +5,17 @@ import { PrismaClient } from "@prisma/client";
 import { databaseAvailable } from "../test-support/infrastructure.js";
 
 /**
- * End-to-end coverage of the BetSkilla seamless-wallet callback over HTTP.
+ * End-to-end coverage of the generic seamless-wallet callback, mounted under
+ * the BetSkilla aggregator name.
  *
- * This is the bridge that makes a game's balance follow the player's wallet:
- * the hub owns the round and calls us for every money movement. Before it
- * existed the adapter returned `false` from `verifyCallback`, so every request
- * was answered with "invalid signature" and games ran on the hub's own balance
- * instead of the player's. The test therefore asserts the balance actually
- * moves in Postgres, not just that a 200 came back.
+ * The handler itself is provider-agnostic: it verifies the signature, maps the
+ * command envelope onto the settlement service and asserts the balance actually
+ * moved in Postgres. That code is correct and worth locking down.
+ *
+ * Caveat, so this test is not misread as proof the BetSkilla wallet works:
+ * BetSkilla never calls this URL with the current player credentials, because
+ * the vendor does not bind sessions to a player (see docs/providers/betskilla.md).
+ * The test proves the endpoint behaves; it does not prove the provider uses it.
  */
 
 const prisma = new PrismaClient();

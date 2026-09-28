@@ -1,12 +1,23 @@
 /**
  * BetSkilla white-label hub adapter.
  *
- * The operator brand host (e.g. https://xenzora.com) fronts the whole platform:
- * `/api/client-login` opens an operator session, `/api/v3/games?type=slot|live`
- * returns the catalogue, and `/api/games/{router}` mints a real game session URL.
+ * The brand host (e.g. https://xenzora.com) fronts a player-facing platform
+ * backed by xenzora.betskilla.com: `/api/client-login` opens a session for the
+ * configured account, `/api/v3/games?type=slot|live` returns the catalogue, and
+ * `/api/games/{router}` mints a game session URL.
  *
  * Sessions are cookie based, so the adapter keeps one HttpClient whose cookie jar
  * is populated by login and reused for every catalogue/launch call.
+ *
+ * NOTE ON WALLET: these credentials identify a *player* account, and the vendor
+ * binds every launched session to whoever is logged in. It ignores any player
+ * identity sent in the launch body — measured, not assumed: `login`, `userId`
+ * and `demo` all leave the returned session unchanged, and game sessions always
+ * come back as real-money sessions on that one account. So there is no way for
+ * this adapter to open a game on behalf of an arbitrary platform player; a
+ * seamless-wallet operator integration (a different credential set and a
+ * different API) would be required. `describeAccount()` surfaces this in the
+ * admin health view instead of letting it look like a working wallet bridge.
  */
 import { ProviderHealth } from "./types.js";
 import {
@@ -49,6 +60,44 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
   constructor(private readonly config: BetSkillaConfig) {
     this.isConfigured = Boolean(config.baseUrl && config.login && config.password);
     this.mode = this.isConfigured ? "live" : "demo";
+  }
+
+  /**
+   * Who do these credentials actually log in as?
+   *
+   * The vendor answers `/api/client-login` with the account record, which is
+   * where the wallet question is answered: a `role` of `player` means the game
+   * sessions settle against that one shared account, not against any of our
+   * players. The admin health view uses this to say so plainly.
+   */
+  async describeAccount(): Promise<{ login: string; role: string; balance: number; currency: string } | null> {
+    if (!this.isConfigured) return null;
+    try {
+      const response = await fetch(`${this.config.baseUrl}/api/client-login`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          origin: this.config.baseUrl,
+        },
+        body: JSON.stringify({ login: this.config.login, password: this.config.password }),
+      });
+      if (!response.ok) return null;
+      const body = (await response.json()) as {
+        login?: string;
+        role?: string;
+        balance?: number;
+        currency?: string;
+      };
+      return {
+        login: body.login ?? this.config.login,
+        role: body.role ?? "unknown",
+        balance: body.balance ?? 0,
+        currency: body.currency ?? this.config.currency,
+      };
+    } catch {
+      return null;
+    }
   }
 
   private async login(): Promise<string> {
@@ -207,25 +256,8 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
       {
         method: "POST",
         body: JSON.stringify({
-          demo: request.mode === "demo",
-          currency: request.currency || this.config.currency,
-          returnUrl: request.returnUrl,
-          /*
-           * The hub addresses the player by login and settles against our
-           * seamless-wallet callback under the same identity. Without these the
-           * session opens anonymously and plays on the hub's own balance, which
-           * is exactly the "no balance in the game" symptom.
-           */
-          ...(request.mode === "demo"
-            ? {}
-            : {
-                login: request.playerLogin ?? request.playerId,
-                userId: request.playerId,
-                sessionToken: request.sessionToken,
-                // Only sent when the caller resolved our public callback host;
-                // otherwise the hub's panel default applies.
-                ...(request.callbackUrlOverride ? { callbackUrl: request.callbackUrlOverride } : {}),
-              }),
+          device: "desktop",
+          lang: "en",
         }),
       },
     );
@@ -314,12 +346,13 @@ export class BetSkillaAggregator implements GameAggregatorAdapter {
     try {
       await this.cookie();
       const data = await this.call<{ count: number }>("/api/v3/games?type=slot&limit=1");
-      // Whether the wallet bridge is armed matters more than the catalogue: with
-      // an empty secret the games still open, but they run on the hub's balance
-      // rather than the player's, so the detail says so explicitly.
-      const wallet = this.config.callbackSecret
-        ? "Cuzdan kopru aktif: oturumlar oyuncu bakiyesine baglanir."
-        : "Cuzdan kopru KAPALI (BETSKILLA_CALLBACK_SECRET bos): oyunlar oyuncu bakiyesine baglanmaz.";
+      const account = await this.describeAccount();
+      // The credentials log in as a shared player account, so a launched game
+      // settles against that account's balance, never against the signed-in
+      // platform player. Say so rather than implying a wallet bridge exists.
+      const wallet = account
+        ? `Launch oturumlari "${account.login}" hesabina baglanir (role=${account.role}, bakiye=${account.balance} ${account.currency}); platform oyuncu bakiyesi baglanmaz.`
+        : "Hesap kimligi okunamadi; cuzdan baglantisi dogrulanamadi.";
       return {
         kind: this.kind,
         provider: this.name,

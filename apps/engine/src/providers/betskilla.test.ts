@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createHmac } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { BetSkillaAggregator } from "../providers/betskilla.js";
@@ -151,8 +150,8 @@ describe("BetSkilla session renewal", () => {
   });
 });
 
-describe("BetSkilla wallet bridge", () => {
-  it("identifies the player on a real launch so the hub settles against our wallet", async () => {
+describe("BetSkilla launch payload", () => {
+  it("sends only the fields the vendor actually reads", async () => {
     const vendor = await startVendor();
     const adapter = buildAdapter(vendor.baseUrl);
 
@@ -165,83 +164,11 @@ describe("BetSkilla wallet bridge", () => {
       mode: "real",
       returnUrl: "https://aurora.example/play/example",
       sessionToken: "session-token-abc",
-      callbackUrlOverride: "https://aurora.example/webhooks/aggregator/betskilla/wallet",
     });
 
-    // Without these fields the session opens as the operator account, which is
-    // why the game showed no balance tied to the player.
-    expect(vendor.lastLaunch()).toMatchObject({
-      demo: false,
-      login: "player_one",
-      userId: "user-123",
-      sessionToken: "session-token-abc",
-      callbackUrl: "https://aurora.example/webhooks/aggregator/betskilla/wallet",
-    });
-  });
-
-  it("leaves a demo launch anonymous and free of wallet fields", async () => {
-    const vendor = await startVendor();
-    const adapter = buildAdapter(vendor.baseUrl);
-
-    await adapter.launchSession({
-      externalGameId: "1",
-      launchRouter: "qt/example-game",
-      playerId: "user-123",
-      playerLogin: "player_one",
-      currency: "TRY",
-      mode: "demo",
-      returnUrl: "https://aurora.example/play/example",
-      sessionToken: "session-token-abc",
-    });
-
-    const body = vendor.lastLaunch();
-    expect(body.demo).toBe(true);
-    expect(body).not.toHaveProperty("login");
-    expect(body).not.toHaveProperty("userId");
-    expect(body).not.toHaveProperty("callbackUrl");
-  });
-
-  it("verifies a callback signed with the shared secret and rejects anything else", () => {
-    const adapter = buildAdapter("https://vendor.example");
-    const body = JSON.stringify({ cmd: "getBalance", login: "player_one" });
-    const good = createHmac("sha256", "callback-secret").update(body).digest("hex");
-
-    expect(adapter.verifyCallback(body, { "x-signature": good })).toBe(true);
-    expect(adapter.verifyCallback(body, {})).toBe(false);
-    expect(adapter.verifyCallback(body, { "x-signature": "deadbeef" })).toBe(false);
-    expect(adapter.verifyCallback(body, { "x-signature": createHmac("sha256", "wrong").update(body).digest("hex") })).toBe(false);
-  });
-
-  it("stays inert when no callback secret is configured", () => {
-    const adapter = new BetSkillaAggregator({
-      baseUrl: "https://vendor.example",
-      login: "operator",
-      password: "secret",
-      currency: "INR",
-      callbackSecret: "",
-    });
-    const body = JSON.stringify({ cmd: "getBalance", login: "player_one" });
-
-    // A blank secret must not degrade into "accept everything".
-    expect(adapter.verifyCallback(body, { "x-signature": "anything" })).toBe(false);
-  });
-
-  it("maps the hub command envelope onto the normalised wallet shape", () => {
-    const adapter = buildAdapter("https://vendor.example");
-
-    expect(adapter.parseWalletCallback({ cmd: "getBalance", login: "player_one" })).toMatchObject({
-      command: "BALANCE",
-      playerLogin: "player_one",
-    });
-    expect(adapter.parseWalletCallback({ cmd: "writeBet", login: "p", bet: 25, win: "10", transactionId: "t1" })).toMatchObject({
-      command: "WRITE_BET",
-      bet: "25",
-      win: "10",
-      transactionId: "t1",
-    });
-    expect(adapter.parseWalletCallback({ cmd: "rollback", login: "p", transactionId: "t1" })).toMatchObject({
-      command: "ROLLBACK",
-    });
-    expect(adapter.parseWalletCallback({ cmd: "somethingElse" })).toBeNull();
+    // Verified against the live host: the vendor binds the session to the
+    // logged-in cookie and ignores any player identity, so sending these does
+    // nothing except imply a wallet bridge that is not there.
+    expect(vendor.lastLaunch()).toEqual({ device: "desktop", lang: "en" });
   });
 });

@@ -128,6 +128,15 @@ the game still launches, but it runs on the provider's own balance instead of th
 player's, which reads as "there is no balance in the game". `GET /webhooks/health`
 reports whether the bridge is armed.
 
+That said, a correct callback handler is only half of it: the provider must
+actually bind sessions to a player and call our wallet URL. BetSkilla's
+`BETSKILLA_LOGIN` is a *player* account and the vendor ignores player identity at
+launch, so on that provider the wallet is disconnected no matter what our side
+does. Before trusting a new provider, load the brand host's own SPA bundle,
+extract its API calls, and check whether the launch endpoint accepts a player
+identity — `BetSkillaAggregator.describeAccount()` and the health detail exist
+precisely so this is visible instead of assumed.
+
 ## Gotchas
 
 - BetSkilla's operator host does **not** answer 401/403 when its session dies. It answers

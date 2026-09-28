@@ -1,38 +1,83 @@
-# BetSkilla seamless-wallet integration
+# BetSkilla integration (catalogue + launch; wallet not connected)
 
-BetSkilla brands (Xenzora, Kingsbet) are white-label hubs: their own `/api`
-gateway serves the catalogue, launches game sessions and passes the player
-identity through to us. Games settle against **our** ledger over a seamless
-wallet, so the balance inside a game is the player's real balance.
+BetSkilla brands (Xenzora, Kingsbet) are white-label, player-facing platforms.
+The brand host fronts a catalogue API (`xenzora.betskilla.com`) used for
+cataloguing and launching games.
+
+**Status: catalogue and launch work; the player wallet does not.** Games launch
+on a single shared account and the vendor does not accept a player identity, so
+the in-game balance is not the platform player's. Read the next section before
+promising anything about balance on this provider.
+
+## Why the game balance is NOT the player's balance
+
+This is the open problem, stated plainly.
+
+`BETSKILLA_LOGIN` / `BETSKILLA_PASSWORD` are a **player account's** credentials,
+not an operator's. Verified against the live host:
+
+```
+POST /api/client-login
+→ 200 {"login":"test_sale","role":"player","balance":0,"currency":"INR",...}
+```
+
+Every game session is bound to whoever that cookie is logged in as. The vendor
+**ignores the player identity in the launch body** — measured, not assumed:
+
+| Launch body | Result |
+| --- | --- |
+| `{device, lang}` | session minted, `mode=REAL` |
+| `{device, lang, login: "someone_else"}` | identical session, no effect |
+| `{device, lang, userId, playerId}` | identical session, no effect |
+| `{device, lang, demo: true}` | still a real session, no demo flag |
+
+Because the session resolves to a single account, the balance shown inside a
+game is that account's (`0 INR`, from the login response) — never the signed-in
+player's. `GET /webhooks/health` now reports this explicitly.
+
+There is **no operator API on the brand host**: `/api/operator/login`,
+`/api/office/login`, `/api/admin/login` and `/api/v3/wallet` all return 404, and
+the SPA bundle exposes no wallet, seamless or operator routes (`gameSessionRouter`
+is launch-only). So these credentials cannot be made to open games on behalf of
+arbitrary players.
 
 ## What is implemented
 
-| Hub side | Our side |
+| Vendor side | Our side |
 | --- | --- |
 | `POST /api/client-login` | `BetSkillaAggregator.login()` — cookie session, refreshed once on expiry |
 | `GET /api/v3/games?type=slot\|live` | `BetSkillaAggregator.listGames()` → `/api/admin/games/sync` |
 | `POST /api/games/{router}` | `BetSkillaAggregator.launchSession()` via `POST /api/games/:slug/launch` |
-| Wallet callbacks (`getBalance`, `writeBet`, `rollback`) | `POST /webhooks/aggregator/betskilla/wallet` |
 
-## Why the balance was disconnected
+Cataloguing and launching work. Launch is catalogue-compatible: it opens the
+game, but on the shared account rather than on the player.
 
-Two things had to line up, and neither did:
+The seamless-wallet callback handler (`parseWalletCallback`, `verifyCallback`,
+`walletResponse`/`walletError`, `POST /webhooks/aggregator/betskilla/wallet`) is
+implemented and tested, but it is **not reachable with these credentials**: the
+vendor never calls a wallet URL for a plain player session, so the handler would
+sit idle. It is correct code waiting for the right integration, not a working
+bridge.
 
-1. **Launch carried no player identity.** The launch payload only sent `demo`
-   and `currency`, so every session opened as the operator account and the hub
-   had no idea which player was playing. Real launches now send `login`,
-   `userId`, `sessionToken` and `callbackUrl`; demo launches stay anonymous
-   because they never touch the wallet.
-2. **The callback bridge was switched off.** `verifyCallback()` returned `false`
-   unconditionally, so the wallet route rejected every callback with
-   `{"status":"fail","error":"invalid signature"}` and nothing ever moved in our
-   ledger. It now verifies an HMAC-SHA256 over the raw body with
-   `BETSKILLA_CALLBACK_SECRET`.
+## How to actually connect the wallet
 
-The hub speaks the same command envelope as Gregmorn (`cmd` + `login` +
-`bet`/`win`), so the adapter maps it onto the same normalised shape and the
-shared `AggregatorWalletService` does the settlement — the same code path
-already proven against Gregmorn, including idempotency and rollback.
+The wallet has to come from a BetSkilla **operator/seamless** agreement, which
+means different credentials and a different API surface than the purely
+player-facing one above. Concretely:
+
+1. Ask BetSkilla for operator API credentials (merchant/operator id + secret),
+   distinct from the player login currently in `BETSKILLA_LOGIN`.
+2. Confirm the operator integration supports single-wallet (`transfer`/
+   `balance` callbacks) and obtain the wallet callback URL + signing key format.
+3. Point `BETSKILLA_CALLBACK_SECRET` at that key, and have BetSkilla register
+   `https://<our-host>/webhooks/aggregator/betskilla/wallet`.
+4. Relaunch: with an operator account, `describeAccount()` should report
+   `role != "player"` and the health detail should stop warning.
+
+Until step 1 lands, no code change on our side can make the in-game balance
+follow the platform player, because the vendor does not accept a player identity
+at launch. The Gregmorn/Gamble Hub integration (`docs/providers/gregmorn.md`) is
+the path that does support this per-player wallet.
 
 ## Configuration
 
