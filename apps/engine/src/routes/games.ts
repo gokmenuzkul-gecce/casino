@@ -107,7 +107,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
   /** Home page payload: one call for everything the landing view needs. */
   app.get("/lobby", { preHandler: optionalAuth }, async (request) => {
-    const [featured, newest, popular, jackpots, categories, bonuses, banners, announcements, bigWins] = await Promise.all([
+    const [featured, newest, popular, jackpots, categories, bonuses, banners, announcements, bigWins, loginx] = await Promise.all([
       prisma.game.findMany({ where: { isActive: true, isFeatured: true }, take: 12, include: { category: true, provider: true, jackpot: true } }),
       prisma.game.findMany({ where: { isActive: true, isNew: true }, orderBy: { releasedAt: "desc" }, take: 12, include: { category: true, provider: true, jackpot: true } }),
       prisma.game.findMany({ where: { isActive: true }, orderBy: { playCount: "desc" }, take: 12, include: { category: true, provider: true, jackpot: true } }),
@@ -121,6 +121,15 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
         orderBy: { payout: "desc" },
         take: 10,
         include: { game: { select: { name: true, slug: true } }, user: { select: { username: true } } },
+      }),
+      // Own shelf for the loginxgamesapi catalogue. It is imported inactive, so
+      // this is empty until the vendor supplies a launch endpoint — the home
+      // page hides the shelf rather than showing tiles that cannot open.
+      prisma.game.findMany({
+        where: { isActive: true, provider: { slug: { startsWith: "loginx-" } } },
+        orderBy: [{ releasedAt: "desc" }, { sortOrder: "asc" }],
+        take: 12,
+        include: { category: true, provider: true, jackpot: true },
       }),
     ]);
 
@@ -147,6 +156,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       featured: featured.map(shapeGame),
       newest: newestDeduped.map(shapeGame),
       popular: popularDeduped.map(shapeGame),
+      loginx: loginx.map(shapeGame),
       categories: categories.map((c) => ({ slug: c.slug, name: c.name, iconUrl: c.iconUrl })),
       jackpots: jackpots.map((j) => ({
         id: j.id,

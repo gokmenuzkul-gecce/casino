@@ -7,6 +7,7 @@ import {
 } from "./aggregator.js";
 import { GregmornAggregator } from "./gregmorn.js";
 import { BetSkillaAggregator } from "./betskilla.js";
+import { LoginxGamesAggregator, loginxVendorsFromEnv } from "./loginx.js";
 import { DemoPsp, PspAdapter, RestPsp } from "./psp.js";
 import { DemoKyc, KycAdapter, RestKyc } from "./kyc.js";
 import {
@@ -87,6 +88,17 @@ export function buildAggregator(): GameAggregatorAdapter {
       callbackSecret: env.betskilla.callbackSecret,
     });
     return betskilla.isConfigured ? betskilla : new DisabledAggregator();
+  }
+
+  // loginxgamesapi fronts four independent vendors behind four hosts. It can
+  // read catalogues only — no launch endpoint exists yet — so it is built for
+  // content prep, never for real play.
+  if (provider === "loginx") {
+    const loginx = new LoginxGamesAggregator({
+      vendors: loginxVendorsFromEnv((key) => process.env[key] ?? ""),
+      currency: env.loginx.currency,
+    });
+    return loginx.isConfigured ? loginx : new DisabledAggregator();
   }
 
   if (!provider || provider === "none" || !baseUrl || !apiKey) return new DisabledAggregator();

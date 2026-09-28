@@ -103,6 +103,16 @@ export const env = {
     callbackSecret: str("BETSKILLA_CALLBACK_SECRET", str("GAME_AGGREGATOR_CALLBACK_SECRET")),
   },
 
+  /**
+   * loginxgamesapi / gitamus. Four independent vendor credential sets, each on
+   * its own host (Pragmatic, PG Soft, Amatic, Amusnet). Only the catalogue can
+   * be read today; there is no launch endpoint and no wallet contract yet, so
+   * this adapter never handles real money. See docs/providers/loginx-games-api.md.
+   */
+  loginx: {
+    currency: str("LOGINX_CURRENCY", str("CURRENCY", "TRY")),
+  },
+
   psp: {
     provider: str("PSP_PROVIDER", "none"),
     baseUrl: str("PSP_BASE_URL"),

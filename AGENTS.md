@@ -175,3 +175,26 @@ precisely so this is visible instead of assumed.
   BetSkilla launches, so it is a cutover, not an addition.
 - External provider launches (BetSkilla) really do open sessions (`qtlauncher.com`),
   so a working external launch is not evidence that Gregmorn is configured.
+- **loginxgamesapi / gitamus** (Pragmatic, PG Soft, Amatic, Amusnet) is a *catalogue-only*
+  integration. `GET /GameList` with `Authorization: Bearer <apitoken>` is the **only**
+  endpoint that answers — every launch path 404s on all four hosts, and query parameters
+  are ignored. It cannot open a game, and there is no wallet callback contract on our
+  side, so it must never be enabled for real play. Adapter: `apps/engine/src/providers/loginx.ts`;
+  full findings in `docs/providers/loginx-games-api.md`.
+  - Cloudflare fronts these hosts and answers `403 Error 1010` to any client without a
+    browser-like `User-Agent`. Bulk parallel probing also trips a rate limit that fakes
+    403 on *every* path — do not read that as "these endpoints exist". Paths are single
+    PascalCase segments (`/GameList`), not `/api/v1/...`.
+  - Credentials are four independent vendor sets (`LOGINX_<VENDOR>_AGENTID|APITOKEN|SECRETKEY|HOST`),
+    entered from Admin → Entegrasyon. One vendor failing logs and is skipped; the others
+    still import.
+  - Import with `npm run sync:loginx` (script) or the **loginx API'den Ice Aktar** button in
+    Admin → Oyun Yonetimi, which also has a `loginx API` / `Pasif Oyunlar` filter
+    (`providerPrefix=loginx-`). Every row is written **inactive on purpose**: publishing them
+    would put ~1,400 tiles in the lobby that fail on click. The home page has a `loginx`
+    shelf that stays hidden while the list is empty.
+  - Before this can go live we need the vendor's launch call and, critically, the
+    seamless-wallet signature scheme. The callback URL they hold points at the Gregmorn
+    verifier (HMAC-SHA256); one description of this call family is `md5(timestamp+salt)`,
+    which that verifier rejects. Do not guess it — money moves on that call. Request text:
+    `docs/providers/loginx-games-api-request-tr.md`.

@@ -22,6 +22,7 @@ import {
   publicValues,
   saveProviderConfig,
 } from "../services/provider-config.js";
+import { buildLoginxAggregator, importLoginxCatalog } from "../services/loginx-catalog.js";
 import { env } from "../lib/env.js";
 import { nanoid } from "nanoid";
 
@@ -683,7 +684,13 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
     const where = {
       category: filters.category ? { slug: filters.category } : undefined,
-      provider: filters.provider ? { slug: filters.provider } : undefined,
+      // `providerPrefix` selects a whole vendor family with one call, e.g.
+      // `loginx-` for everything imported from loginxgamesapi.
+      provider: filters.provider
+        ? { slug: filters.provider }
+        : filters.providerPrefix
+          ? { slug: { startsWith: filters.providerPrefix } }
+          : undefined,
       isActive: filters.active === "true" ? true : filters.active === "false" ? false : undefined,
       embedType: filters.embedType,
       OR: query.search ? [{ name: { contains: query.search, mode: "insensitive" as const } }, { slug: { contains: query.search } }] : undefined,
@@ -808,6 +815,36 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     });
 
     return { created, updated, total: games.length, provider: aggregator.name };
+  });
+
+  /**
+   * Pull the loginxgamesapi catalogue (four vendors) into the local game list.
+   *
+   * Separate from `/admin/games/sync`: that one follows the single active
+   * aggregator, while this one is a vendor-specific importer that can run even
+   * when another aggregator is live. Games land inactive.
+   */
+  app.post("/admin/games/sync-loginx", { preHandler: [authenticate, requirePermission(PERMISSIONS.GAME_EDIT)] }, async (request) => {
+    const adapter = buildLoginxAggregator(env.loginx.currency);
+    if (!adapter.isConfigured) {
+      // Deliberately not `providerDisabled`: that message tells the operator to
+      // switch to live mode, which would be wrong here — loginx is catalogue-only
+      // and must never handle real money.
+      throw Errors.validation(
+        "loginx vendor kimligi girilmedi. Admin > Entegrasyon ekraninda LOGINX_<VENDOR>_APITOKEN degerlerini girin.",
+      );
+    }
+
+    const result = await importLoginxCatalog(prisma, adapter, env.loginx.currency);
+
+    await audit.log({
+      actorId: request.user!.id,
+      action: "GAMES_SYNCED",
+      entityType: "Game",
+      after: { ...result, provider: "loginx" },
+    });
+
+    return result;
   });
 
   /**
@@ -1197,7 +1234,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       scheduledTasks: scheduled,
       /** The env keys each integration needs, so the admin UI can guide setup. */
       requiredEnvKeys: PROVIDER_ENV_KEYS,
-      supportedAggregators: ["generic", "gregmorn", "betskilla", "softswiss", "slotegrator", "1x2", "hub88", "pragmatic"],
+      supportedAggregators: ["generic", "gregmorn", "betskilla", "loginx", "softswiss", "slotegrator", "1x2", "hub88", "pragmatic"],
       supportedPsps: ["generic", "payfix", "papara", "stripe", "payhound"],
     };
   });

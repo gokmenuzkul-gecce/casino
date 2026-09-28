@@ -12,6 +12,8 @@ interface LobbyData {
   featured: GameCardData[];
   newest: GameCardData[];
   popular: GameCardData[];
+  /** loginxgamesapi catalogue. Empty until the vendor supplies a launch endpoint. */
+  loginx: GameCardData[];
   categories: { slug: string; name: string; iconUrl?: string | null }[];
   jackpots: { id: string; name: string; amount: string; currency: string }[];
   bonuses: {
@@ -192,6 +194,27 @@ export function HomePage() {
           </div>
         ))}
       </Carousel>
+
+      {/* ── loginxgamesapi catalogue ───────────────────────── */}
+      {data.loginx.length > 0 && (
+        <>
+          <div className="carousel-head">
+            <div className="section-title" style={{ margin: 0 }}>
+              New Games
+            </div>
+            <Link to="/games" className="btn btn-ghost btn-sm">
+              All games <IconChevronRight size={14} />
+            </Link>
+          </div>
+          <Carousel>
+            {data.loginx.map((game) => (
+              <div className="carousel-item" key={game.slug}>
+                <GameCard game={game} favorite={favorites.has(game.slug)} onToggleFavorite={toggleFavorite} />
+              </div>
+            ))}
+          </Carousel>
+        </>
+      )}
 
       {/* ── promotions ─────────────────────────────────────── */}
       {data.bonuses.length > 0 && (

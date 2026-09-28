@@ -29,11 +29,20 @@ export function AdminGames({ onToast }: { onToast: ToastFn }) {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncingLoginx, setSyncingLoginx] = useState(false);
+  /**
+   * Which slice of the catalogue to show. `loginx` narrows to the vendor family
+   * imported from loginxgamesapi; `inactive` surfaces the not-yet-published
+   * rows, which is where that whole family currently sits.
+   */
+  const [source, setSource] = useState<"all" | "loginx" | "inactive">("all");
 
   const load = () => {
     setLoading(true);
     const query = new URLSearchParams({ page: String(page), pageSize: "40" });
     if (search) query.set("search", search);
+    if (source === "loginx") query.set("providerPrefix", "loginx-");
+    if (source === "inactive") query.set("active", "false");
     get<{ games: AdminGame[]; total: number }>(`/api/admin/games?${query}`)
       .then((r) => {
         setGames(r.games);
@@ -43,7 +52,7 @@ export function AdminGames({ onToast }: { onToast: ToastFn }) {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page]);
+  useEffect(load, [page, source]);
 
   const update = async (slug: string, changes: Record<string, unknown>) => {
     try {
@@ -72,20 +81,65 @@ export function AdminGames({ onToast }: { onToast: ToastFn }) {
     }
   };
 
+  /**
+   * Import the loginxgamesapi catalogue. Games arrive inactive, so this only
+   * stages content until the vendor supplies a launch endpoint.
+   */
+  const syncLoginx = async () => {
+    setSyncingLoginx(true);
+    try {
+      const result = await post<{ created: number; updated: number; total: number; vendors: string[] }>("/api/admin/games/sync-loginx", {});
+      onToast({
+        message: `loginx (${result.vendors.join(", ")}): ${result.created} yeni, ${result.updated} guncellenen (${result.total} oyun, hepsi pasif)`,
+        kind: "success",
+      });
+      setSource("loginx");
+      setPage(1);
+      load();
+    } catch (err) {
+      onToast({ message: err instanceof Error ? err.message : "loginx senkronizasyonu basarisiz", kind: "error" });
+    } finally {
+      setSyncingLoginx(false);
+    }
+  };
+
   return (
     <div className="page">
       <div className="row-between mb">
         <h1 className="section-title" style={{ margin: 0 }}>🎮 Oyun Yonetimi <span className="count">{total}</span></h1>
-        <button className="btn btn-primary btn-sm" onClick={sync} disabled={syncing}>
-          {syncing ? "Senkronize ediliyor..." : "🔌 Saglayicidan Ice Aktar"}
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={syncLoginx} disabled={syncingLoginx}>
+            {syncingLoginx ? "Ice aktariliyor..." : "📥 loginx API'den Ice Aktar"}
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={sync} disabled={syncing}>
+            {syncing ? "Senkronize ediliyor..." : "🔌 Saglayicidan Ice Aktar"}
+          </button>
+        </div>
       </div>
 
       <div className="card mb">
+        <div className="row mb" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button className={`btn btn-sm ${source === "all" ? "btn-primary" : "btn-ghost"}`} onClick={() => { setSource("all"); setPage(1); }}>
+            Tum Oyunlar
+          </button>
+          <button className={`btn btn-sm ${source === "loginx" ? "btn-primary" : "btn-ghost"}`} onClick={() => { setSource("loginx"); setPage(1); }}>
+            loginx API
+          </button>
+          <button className={`btn btn-sm ${source === "inactive" ? "btn-primary" : "btn-ghost"}`} onClick={() => { setSource("inactive"); setPage(1); }}>
+            Pasif Oyunlar
+          </button>
+        </div>
         <div className="input-row">
           <input className="input" placeholder="Oyun adi veya slug ara" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (setPage(1), load())} />
           <button className="btn btn-primary" onClick={() => { setPage(1); load(); }}>Ara</button>
         </div>
+        {source === "loginx" && (
+          <div className="alert alert-info mt">
+            loginxgamesapi katalogu (<span className="mono">loginx-*</span>). Bu oyunlar <span className="bold">pasif</span> olarak
+            ice aktarilir: saglayici henuz oyun acma (launch) ucu ve cuzdan callback sozlesmesini paylasmadi, bu yuzden
+            yayina alinmalari tiklandiginda hata verir. Dokumantasyon gelince ayni ice aktarma bu satirlari aktive eder.
+          </div>
+        )}
       </div>
 
       <div className="card">

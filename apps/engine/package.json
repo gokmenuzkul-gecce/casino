@@ -12,7 +12,8 @@
     "test": "vitest run --passWithNoTests",
     "smoke:gregmorn": "tsx --env-file=../../.env scripts/gregmorn-smoke.ts",
     "sync:games": "tsx --env-file=../../.env scripts/sync-betskilla.ts",
-    "e2e:player": "tsx --env-file=../../.env scripts/e2e-player.ts"
+    "e2e:player": "tsx --env-file=../../.env scripts/e2e-player.ts",
+    "sync:loginx": "tsx --env-file=../../.env scripts/sync-loginx.ts"
   },
   "dependencies": {
     "@aurora/db": "*",
