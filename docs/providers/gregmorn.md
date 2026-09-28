@@ -88,12 +88,31 @@ Two things must be arranged with Gregmorn before real play works:
 
 ## Verifying the integration
 
+Before stage credentials exist, the adapter is verified against a local server
+that implements this spec's contract — same form-encoded login, same bearer
+catalogue call, same `X-Signature` over the raw body, same `additionalProperties:
+false` request shape. It also covers the 401-refresh path and callback signature
+verification:
+
 ```bash
-npm test                      # engine tests cover settlement + the HTTP callback
+npm test -- gregmorn
 ```
 
-The tests run against the real database and the real ledger when Postgres is
-reachable; otherwise they skip with an explicit reason.
+Once credentials are in place, the same walk runs against the vendor's host and
+prints a PASS/FAIL verdict per step:
+
+```bash
+npm run smoke:gregmorn            # all four steps
+npm run smoke:gregmorn -- --only=1
+```
+
+Nothing here substitutes for the real credentials: only the vendor can issue
+`user_id` and the player-specific `secret_api_key`. The local test proves our
+half of the contract is correct, so a failure against stage is then known to be
+an account or allowlist problem rather than a code problem.
+
+The settlement and HTTP-callback suites run against the real database and ledger
+when Postgres is reachable; otherwise they skip with an explicit reason.
 
 To check a stage deployment by hand:
 
